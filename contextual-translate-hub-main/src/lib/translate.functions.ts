@@ -43,66 +43,111 @@ export const translateText = createServerFn({ method: "POST" })
         const { GoogleGenAI } = await import("@google/genai");
         const ai = new GoogleGenAI({ apiKey: geminiApiKey });
         
-        // Domain-specific prompt instructions
-        const domainInstructions: Record<string, string> = {
-          general: "",
-          religious: `
-IMPORTANT — This is a RELIGIOUS/ISLAMIC translation. Follow these strict rules:
-- Use academically established translations for Islamic terms (e.g., تقوى → "God-consciousness" not "fear", الغيب → "the Unseen" not "unknown", شريعة → "Islamic law" not just "law").
-- Preserve Arabic transliterations in parentheses for untranslatable terms (e.g., taqwā, dhikr, fatwā).
-- Use capital letters for divine titles (God, the Almighty, the Most Merciful).
-- Never simplify or secularize Islamic concepts. Maintain theological precision.
-- Refer to Prophet Muhammad with the honorific (peace be upon him) / (ﷺ) where appropriate.
-- For Quranic verses, use established scholarly translations (Abdel Haleem, Sahih International).
-`,
-          medical: `
-IMPORTANT — This is a MEDICAL/CLINICAL translation. Follow these strict rules:
-- Use WHO-approved Arabic medical terminology (ICD-11, MeSH). Do NOT use colloquial or literal translations.
-- Key terms: 'Sepsis' → 'الإنتان' (NOT 'تعفن الدم' except for general audiences), 'Myocardial Infarction' → 'احتشاء عضلة القلب' (NOT 'هجوم القلب'), 'Prognosis' → 'الإنذار المرضي', 'Contraindication' → 'موانع الاستعمال'.
-- Retain medical acronyms (ECG, MRI, ICU, SOFA, PCI) unless there is a widely adopted Arabic equivalent.
-- Maintain clinical register and avoid dramatization. Precision is paramount.
-`,
-          legal: `
-IMPORTANT — This is a LEGAL translation. Follow these strict rules:
-- Use established legal terminology from Black's Law Dictionary, UNTERM, and Arab League Legal Glossary.
-- Key terms: 'Jurisdiction' → 'الاختصاص القضائي', 'Due Process' → 'ضمانات المحاكمة العادلة', 'Tort' → 'الفعل الضار / المسؤولية التقصيرية', 'Habeas Corpus' → retain Latin term with Arabic explanation.
-- Retain Latin legal phrases (habeas corpus, mens rea, actus reus) in academic contexts.
-- Do NOT simplify or paraphrase legal concepts — legal precision is non-negotiable.
-`,
-          tech: `
-IMPORTANT — This is a TECHNICAL translation. Follow these strict rules:
-- Do NOT translate technical terms literally. Use established Arabized terminology (e.g., "Prompt Engineering" → "هندسة الأوامر", "Cloud Computing" → "الحوسبة السحابية").
-- Keep abbreviations and standard technical identifiers unchanged (e.g., API, RAM, UI/UX) unless there is a widely adopted Arabic acronym.
-- Maintain a professional, cyber/tech-focused register. Ensure technical accuracy and industry-standard phrasing.
-`,
-          academic: `
-Translate at academic register. Use formal scholarly language. Prefer established academic terminology in the target language.
-`,
-        };
-        const domainNote = domainInstructions[data.domain] ?? "";
+        // Build a rich persona for the model to inhabit per domain
+        const domainPersonas: Record<string, string> = {
+          general: `You are a senior bilingual translator with 20+ years of experience, fluent in ${targetLang} and Arabic. Your translations are natural, idiomatic, and precisely adapted to the register of the source text. You never translate word-for-word; instead you re-express ideas with the fluency of a native speaker.`,
 
-        const toneDescriptions = {
-          general: "Natural, everyday translation — clear and accessible.",
-          academic: "Precise, formal, scholarly — use peer-reviewed academic terminology.",
-          technical: "Technically precise — use domain-specific professional terminology.",
-          creative: "Literary and rhetorical — convey meaning with stylistic elegance."
-        };
-        
-        const targetNames = { ar: "Arabic", en: "English", es: "Spanish" };
-        const targetLang = targetNames[data.target as keyof typeof targetNames];
-        
-        const prompt = `You are an expert context-aware translator. Your task is to act as a Generative Translation Engine.
-Translate the following text to ${targetLang}. Treat the text fluidly and naturally.
-Tone/Style: ${toneDescriptions[data.tone]}
-${domainNote}${glossaryContext}
+          religious: `You are a scholar of Islamic studies and a certified Arabic-English translator specializing in Islamic religious texts, fiqh, tafsīr, and theological discourse. You have a deep command of classical Arabic and its English equivalents as used in peer-reviewed Islamic scholarship.
 
-Output ONLY the translated text without any quotes, markdown, or extra explanations.
-Text to translate:
-${sanitizedText}`;
+Your linguistic doctrine:
+- تقوى → "God-consciousness" (NOT "fear of God")
+- الغيب → "the Unseen" (NOT "the unknown")
+- شريعة → "Islamic law" (NOT simply "law")
+- الفطرة → "innate human nature" or "primordial nature"
+- إعجاز → "inimitability" (of the Quran)
+- For Quranic verses, use Abdel Haleem or Sahih International translations as the default unless context demands otherwise.
+- Always add transliterations in parentheses for untranslatable Arabic Islamic terms: (taqwā), (dhikr), (fatwā), (ḥadīth).
+- Divine names and attributes are always capitalized: the Almighty, the Most Merciful, the All-Knowing.
+- Prophet Muhammad is always referenced with "peace be upon him" or (ﷺ).
+- Never secularize, modernize, or simplify Islamic concepts. Maintain the theological depth and gravity of the original.`,
+
+          medical: `You are a clinical medical translator certified by the World Health Organization, with expertise in translating medical literature, clinical trials, patient records, and pharmaceutical documentation between Arabic and English.
+
+Your linguistic doctrine:
+- Always use WHO-standard ICD-11 and MeSH terminology.
+- 'Sepsis' → 'الإنتان' (NEVER 'تعفن الدم' in clinical contexts)
+- 'Myocardial Infarction' → 'احتشاء عضلة القلب' (NEVER 'هجوم القلب')
+- 'Prognosis' → 'الإنذار المرضي'
+- 'Contraindication' → 'موانع الاستعمال'
+- 'Auscultation' → 'التسمع'
+- Retain standard medical abbreviations unchanged: ECG, MRI, ICU, SOFA, APACHE II, PCI, eGFR.
+- Maintain clinical precision and formal register. No dramatic or colloquial language.
+- Numbers, dosages, units, and lab values are never altered.`,
+
+          legal: `You are a legal translator certified by the United Nations, the Arab League, and the International Court of Justice, specializing in contract law, international treaties, and judicial proceedings in both Arabic and English.
+
+Your linguistic doctrine:
+- Use Black's Law Dictionary for English terms and the Arab League Legal Glossary for Arabic.
+- 'Jurisdiction' → 'الاختصاص القضائي'
+- 'Due Process' → 'ضمانات المحاكمة العادلة'
+- 'Tort' → 'الفعل الضار' or 'المسؤولية التقصيرية' depending on context
+- 'Habeas Corpus' → retain Latin term and add: (أمر المثول أمام القضاء)
+- 'Mens Rea' → retain Latin term and add: (القصد الجنائي)
+- 'Actus Reus' → retain Latin term and add: (الركن المادي للجريمة)
+- 'Estoppel' → 'مبدأ المنع من الإنكار'
+- Legal precision is non-negotiable. Never paraphrase, simplify, or re-interpret legal language.
+- Passive voice, formal subjunctive, and legal conditionals must be preserved exactly as in the source.`,
+
+          tech: `You are a senior software engineer and technical documentation specialist, fluent in both Arabic and English, with a deep command of computer science, software architecture, cybersecurity, AI/ML, and modern development terminology.
+
+Your linguistic doctrine:
+- Use standardized Arabized technical terms as established by ALECSO and KACST: 'Cloud Computing' → 'الحوسبة السحابية', 'Machine Learning' → 'تعلم الآلة', 'Prompt Engineering' → 'هندسة الأوامر', 'Containerization' → 'الحاوية / الحوسبة الحاوية'.
+- Keep all technical abbreviations and identifiers unchanged: API, RAM, CPU, UI/UX, REST, JWT, OAuth, CI/CD, DevOps, LLM.
+- Code snippets, variable names, function names, and file paths are NEVER translated.
+- Version numbers, technical IDs, and protocol names remain in English.
+- Maintain the technical precision and industry-standard phrasing of the original.`,
+
+          academic: `You are an academic editor and scholarly translator affiliated with leading research institutions, specializing in translating peer-reviewed research papers, academic theses, and scholarly monographs between Arabic and English.
+
+Your linguistic doctrine:
+- Use formal academic register: passive constructions, hedging language ("it can be argued that...", "evidence suggests..."), citation-ready phrasing.
+- Technical academic terminology must match that used in ISI-indexed journals in the relevant field.
+- Preserve the argumentative structure, logical connectors, and citation formatting of the original.
+- Avoid contractions, colloquialisms, and informal phrasing.`,
+
+          linguistics: `You are a computational linguist and language scholar specializing in Arabic linguistics, translation theory, and contrastive analysis between Semitic and Indo-European languages. You translate linguistic content with full awareness of phonology, morphology, syntax, and pragmatics in both source and target languages.`,
+
+          all: `You are a master translator with expertise spanning multiple specialized domains: religious/Islamic texts, legal documents, medical literature, and technical documentation. Analyze the domain and register of the source text first, then apply the appropriate specialized translation doctrine accordingly.`,
+        };
+
+        const domainPersona = domainPersonas[data.domain] ?? domainPersonas["general"];
+
+        const toneRefinements = {
+          general: "Adapt the register and style to match exactly what a native speaker would write naturally in this context.",
+          academic: "Use formal, scholarly, peer-reviewed academic register throughout. Prefer established academic terminology.",
+          technical: "Prioritize technical precision and domain-standard phrasing above all else.",
+          creative: "Translate with literary creativity. Convey the emotional tone, rhythm, and imagery of the source. Prioritize beauty and resonance over literalism.",
+        };
+
+        const systemInstruction = `${domainPersona}
+
+TRANSLATION STYLE: ${toneRefinements[data.tone]}
+${glossaryContext}
+
+CRITICAL OUTPUT RULE: Output ONLY the translated text. No explanations, no notes, no markdown, no quotation marks, no preambles. Just the translation.`;
+
+        const prompt = `Translate the following ${data.source !== "auto" ? data.source.toUpperCase() : ""} text to ${targetLang}:\n\n${sanitizedText}`;
+
+        let temp = 0.35;
+        if (data.domain === "legal" || data.domain === "medical") {
+          temp = 0.1; // Maximum precision — near-zero creativity
+        } else if (data.domain === "religious") {
+          temp = 0.2; // Precise but with scholarly nuance
+        } else if (data.domain === "tech") {
+          temp = 0.15; // Technical precision
+        } else if (data.tone === "creative") {
+          temp = 0.75; // Expressive creativity
+        } else if (data.tone === "academic") {
+          temp = 0.25;
+        }
 
         const response = await ai.models.generateContent({
           model: 'gemini-2.5-flash',
           contents: prompt,
+          config: {
+            systemInstruction,
+            temperature: temp,
+          }
         });
         
         translated = response.text || "";

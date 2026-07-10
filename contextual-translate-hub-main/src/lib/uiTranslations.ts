@@ -1,4 +1,4 @@
-export type UILang = "ar" | "en" | "es";
+export type UILang = "ar" | "en";
 
 export const UI_TRANSLATIONS = {
   ar: {
@@ -86,48 +86,5 @@ export const UI_TRANSLATIONS = {
     academicToneHint: "Precise, formal, research-ready",
     technicalToneHint: "Accurate software and engineering terms",
     creativeToneHint: "Rhetorical, fluid, and literary"
-  },
-  es: {
-    brand: "Lughawi",
-    brandSubtitle: "Traducción contextual inteligente",
-    beta: "Beta",
-    textTab: "Traducción de Texto",
-    filesTab: "Traducción de Archivos",
-    soon: "Pronto",
-    originalText: "Texto Original",
-    translation: "Traducción",
-    textareaPlaceholder: "Escribe o pega el texto aquí para traducción instantánea...",
-    outputPlaceholder: "La traducción aparecerá aquí una vez que escribas.",
-    translating: "Traduciendo...",
-    sidebarTitle: "Términos y Matices Léxicos",
-    sidebarPlaceholder: "Los términos clave de su texto aparecerán aquí con notas contextuales que coincidan con el tono seleccionado.",
-    historyTitle: "Historial de Traducción",
-    clearHistory: "Borrar Historial",
-    emptyHistory: "Aún no hay traducciones guardadas. El historial se almacena de forma segura mediante AES-GCM local.",
-    detectedLang: "Idioma detectado",
-    words: "palabras",
-    chars: "caracteres",
-    toneLabel: "Tono",
-    listen: "Escuchar",
-    copy: "Copiar",
-    copied: "¡Copiado!",
-    filesComingSoonTitle: "Traducción de Archivos — PDF y DOCX",
-    filesComingSoonBadge: "Próximamente",
-    filesComingSoonDesc: "Suba sus documentos y obtenga una traducción completa manteniendo el formato original. Esta función está en desarrollo activo.",
-    dragDrop: "Arrastre y suelte sus archivos aquí",
-    or: "o",
-    chooseFiles: "Seleccionar Archivos",
-    supportedFormats: "Formatos: PDF · DOCX · DOC — hasta 20MB por archivo",
-    pendingFilesHeader: "Estos archivos se procesarán tan pronto como se lance la función:",
-    footerText: "Todos los derechos reservados © 2026 nrajmi | Plataforma de Traducción Inteligente y Segura Lughawi.",
-    historyLimitAlert: "Sus últimas 30 traducciones se cifran localmente con AES-GCM.",
-    generalTone: "General",
-    academicTone: "Académico",
-    technicalTone: "Técnico",
-    creativeTone: "Creativo",
-    generalToneHint: "Comunicación cotidiana y natural",
-    academicToneHint: "Preciso, formal, orientado a investigación",
-    technicalToneHint: "Términos de software e ingeniería exactos",
-    creativeToneHint: "Retórico, expresivo y literario"
   }
 };

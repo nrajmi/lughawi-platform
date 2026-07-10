@@ -24,6 +24,14 @@ export const translateText = createServerFn({ method: "POST" })
     // 1. Sanitize input to mitigate script injection and CSRF threats
     const sanitizedText = sanitizeInput(data.text);
     
+    // 2. Identify local glossary terms to serve as Guidelines/Gold Standard
+    const localMatches = findDictionaryMatches(sanitizedText, data.tone, data.domain);
+    let glossaryContext = "";
+    if (localMatches.length > 0) {
+      glossaryContext = `\n\nGOLD STANDARD TERMINOLOGY / GUIDELINES:\nIf any of the following concepts appear, you MUST use these exact translations:\n` +
+        localMatches.map(m => `- Source term: "${m.translations.ar || m.term}" <-> Target term: "${m.translations[data.target as 'ar'|'en'|'es'] || m.term}" (Nuance: ${m.nuances[data.tone]?.[data.target as 'ar'|'en'|'es'] || m.definitions[data.target as 'ar'|'en'|'es']})`).join("\n");
+    }
+    
     try {
       let translated = "";
       let detected = data.source;
@@ -83,9 +91,11 @@ Translate at academic register. Use formal scholarly language. Prefer establishe
         const targetNames = { ar: "Arabic", en: "English", es: "Spanish" };
         const targetLang = targetNames[data.target as keyof typeof targetNames];
         
-        const prompt = `Translate the following text to ${targetLang}.
+        const prompt = `You are an expert context-aware translator. Your task is to act as a Generative Translation Engine.
+Translate the following text to ${targetLang}. Treat the text fluidly and naturally.
 Tone/Style: ${toneDescriptions[data.tone]}
-${domainNote}
+${domainNote}${glossaryContext}
+
 Output ONLY the translated text without any quotes, markdown, or extra explanations.
 Text to translate:
 ${sanitizedText}`;
@@ -124,21 +134,8 @@ ${sanitizedText}`;
         detected = data.source === "auto" ? (json[2] || data.source) : data.source;
       }
 
-      // 3. Hybrid Tone-Aware Post-Processing for terms
-      const localMatches = findDictionaryMatches(sanitizedText, data.tone, data.domain);
-      
-      if (!geminiApiKey && data.tone !== "general") {
-        // Only apply regex overrides if we didn't use Gemini (Gemini handles tone natively)
-        localMatches.forEach((m) => {
-          const genericTarget = m.translations[data.target as keyof typeof m.translations];
-          if (data.target === "ar") {
-            const googleLiteral = "بناء الجملة"; 
-            translated = translated.replace(new RegExp(googleLiteral, "g"), genericTarget);
-            translated = translated.replace(new RegExp("قواعد عالمية", "g"), "النحو الكلي");
-            translated = translated.replace(new RegExp("دلالات", "g"), "علم الدلالة");
-          }
-        });
-      }
+      // 4. Enrich terms using our rich local dictionary nuances
+      // Post-processing string replacement removed in favor of Generative Glossary-Driven approach.
 
       // 4. Enrich terms using our rich local dictionary nuances
       const terms: { term: string; note: string }[] = [];

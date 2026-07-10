@@ -322,7 +322,7 @@ function TranslatorPage() {
 
           <div className="flex items-center gap-2">
             <div className="flex items-center rounded border border-border overflow-hidden text-[11px] font-medium">
-              {(["ar", "en", "es"] as UILang[]).map((lang, i) => (
+              {(["ar", "en"] as UILang[]).map((lang, i) => (
                 <button
                   key={lang}
                   onClick={() => changeUiLanguage(lang)}
@@ -1499,23 +1499,23 @@ function TranslatorPage() {
                 Lughawi Platform
               </span>
             </div>
-            <span className="text-[10px] text-muted-foreground/70" dir="rtl">
-              جميع الحقوق محفوظة © لمنصة لغوي 2026 | تم التطوير بواسطة{" "}
+            <span className="text-[10px] text-muted-foreground/70" dir={isRTL ? "rtl" : "ltr"}>
+              {isRTL ? "جميع الحقوق محفوظة © لمنصة لغوي 2026 | تم التطوير بواسطة " : "All Rights Reserved © Lughawi Platform 2026 | Developed by "}
               <span className="font-semibold text-foreground/60 hover:text-foreground transition-colors cursor-default" title="Platform Developer & Intellectual Property Owner">nrajmi</span>
             </span>
             {/* Contact email */}
             <a
               href="mailto:lughawi.platform@gmail.com"
               className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-primary transition-colors group"
-              title="التواصل والشكاوي والمقترحات"
+              title={isRTL ? "التواصل والشكاوي والمقترحات" : "Contact & Support"}
             >
               <Mail className="h-3 w-3 group-hover:text-primary transition-colors" />
               <span className="group-hover:underline underline-offset-2">lughawi.platform@gmail.com</span>
             </a>
             <div className="flex items-center gap-3 mt-0.5 text-[10px] font-medium">
-              <Link to="/about" className="text-muted-foreground hover:text-foreground transition-colors">عن المنصة</Link>
-              <Link to="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">سياسة الخصوصية</Link>
-              <Link to="/terms" className="text-muted-foreground hover:text-foreground transition-colors">شروط الاستخدام</Link>
+              <Link to="/about" className="text-muted-foreground hover:text-foreground transition-colors">{isRTL ? "عن المنصة" : "About"}</Link>
+              <Link to="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">{isRTL ? "سياسة الخصوصية" : "Privacy Policy"}</Link>
+              <Link to="/terms" className="text-muted-foreground hover:text-foreground transition-colors">{isRTL ? "شروط الاستخدام" : "Terms of Use"}</Link>
             </div>
           </div>
 
@@ -1545,7 +1545,7 @@ function LanguageSelect({ value, onChange, includeAuto, uiLang }: { value: strin
       className="h-9 px-3 py-1.5 text-sm font-medium bg-card border border-border rounded text-foreground focus:outline-none focus:ring-1 focus:ring-primary/30 hover:border-primary/30 transition-colors cursor-pointer min-w-[160px]"
     >
       {LANGUAGES.filter(l => includeAuto || l.code !== "auto").map(l => (
-        <option key={l.code} value={l.code}>{uiLang === "ar" ? l.name : uiLang === "es" ? (l.es || l.en) : l.en}</option>
+        <option key={l.code} value={l.code}>{uiLang === "ar" ? l.name : l.en}</option>
       ))}
     </select>
   );

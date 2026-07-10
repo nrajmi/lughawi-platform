@@ -22,6 +22,11 @@ import {
   RotateCcw,
   Microscope,
   Sparkles,
+  Mail,
+  Wrench,
+  BarChart2,
+  BookCopy,
+  PenLine,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LANGUAGES, TONES, type Tone } from "@/lib/translate";
@@ -32,6 +37,9 @@ import { UI_TRANSLATIONS, type UILang } from "@/lib/uiTranslations";
 import { findDictionaryMatches } from "@/lib/dictionary";
 import { type DictionaryDomain, RELIGIOUS_GLOSSARY, type ReligiousGlossaryEntry, TECH_GLOSSARY, type TechGlossaryEntry, MEDICAL_GLOSSARY, type MedicalGlossaryEntry, LEGAL_GLOSSARY, type LegalGlossaryEntry } from "@/lib/dictionaries";
 import { LinguisticAnalyzer } from "@/components/LinguisticAnalyzer";
+import { TranslationBenchmark } from "@/components/TranslationBenchmark";
+import { AcademicFlashcards } from "@/components/AcademicFlashcards";
+import { AcademicRephraser } from "@/components/AcademicRephraser";
 import { fetchWordDetails, type DictionaryApiResponse } from "@/lib/dictionary-api";
 import { getPredictions } from "@/lib/predictive-text";
 import { motion, AnimatePresence } from "framer-motion";
@@ -116,6 +124,11 @@ function TranslatorPage() {
   const [hoveredTechGlossary, setHoveredTechGlossary] = useState<TechGlossaryEntry | null>(null);
   const [hoveredMedGlossary, setHoveredMedGlossary] = useState<MedicalGlossaryEntry | null>(null);
   const [hoveredLegalGlossary, setHoveredLegalGlossary] = useState<LegalGlossaryEntry | null>(null);
+  // Main page mode: translator or linguistic tools hub
+  const [mainTab, setMainTab] = useState<"translator" | "tools">("translator");
+  // Active tool inside the tools hub
+  const [activeTool, setActiveTool] = useState<"analyzer" | "benchmark" | "flashcards" | "rephraser">("analyzer");
+  const [analyzerText, setAnalyzerText] = useState("");
   const debounceRef = useRef<number | null>(null);
 
   const t = useMemo(() => UI_TRANSLATIONS[uiLanguage], [uiLanguage]);
@@ -335,6 +348,32 @@ function TranslatorPage() {
 
       {/* ═══════════ MAIN ═══════════ */}
       <main className="flex-1 mx-auto w-full max-w-7xl px-5 py-6">
+
+        {/* ══ MAIN PAGE TAB SWITCHER — Translator / Linguistic Tools ══ */}
+        <div className="border-b border-border mb-5 flex items-center">
+          <button
+            id="main-tab-translator"
+            onClick={() => setMainTab("translator")}
+            className={cn("main-tab gap-2", mainTab === "translator" && "main-tab-active")}
+          >
+            <Languages className="h-3.5 w-3.5" />
+            {isRTL ? "الترجمة" : "Translation"}
+          </button>
+          <button
+            id="main-tab-tools"
+            onClick={() => setMainTab("tools")}
+            className={cn("main-tab gap-2 relative", mainTab === "tools" && "main-tab-active")}
+          >
+            <Wrench className="h-3.5 w-3.5" />
+            {isRTL ? "الأدوات اللغوية المساعدة" : "Linguistic Tools"}
+            <span className="text-[9px] bg-primary/10 text-primary px-1.5 py-0.5 rounded font-bold uppercase tracking-wide">
+              {isRTL ? "جديد" : "New"}
+            </span>
+          </button>
+        </div>
+
+        {/* ══════════ TRANSLATOR MODE ══════════ */}
+        {mainTab === "translator" && (<>
 
         {/* ── Domain Tabs ── */}
         <div className="border-b border-border mb-5 flex items-center overflow-x-auto">
@@ -1285,14 +1324,166 @@ function TranslatorPage() {
             )}
           </AnimatePresence>
         </div>
+
+        {/* Close translator conditional */}
+        </>)}
+
+        {/* ══════════ LINGUISTIC TOOLS HUB MODE ══════════ */}
+        {mainTab === "tools" && (
+          <div className="space-y-5">
+            {/* Tools Hub Header */}
+            <div className="classic-panel rounded-lg overflow-hidden">
+              <div className="px-5 py-4 bg-gradient-to-r from-primary/8 to-primary/3 dark:from-primary/12 dark:to-primary/5 border-b border-border flex items-start gap-4">
+                <div className="p-2.5 bg-primary/10 rounded-lg border border-primary/20 flex-shrink-0">
+                  <Wrench className="h-5 w-5 text-primary" />
+                </div>
+                <div>
+                  <h2 className="text-base font-serif font-bold text-foreground">
+                    {isRTL ? "الأدوات اللغوية المساعدة" : "Linguistic Auxiliary Tools"}
+                  </h2>
+                  <p className="text-xs text-muted-foreground mt-1 leading-relaxed max-w-xl">
+                    {isRTL
+                      ? "مجموعة أدوات أكاديمية متكاملة مصممة لمساعدة الطلاب والباحثين في فهم البنية اللغوية، ومقارنة محركات الترجمة، واستذكار المصطلحات، وإعادة الصياغة الأكاديمية."
+                      : "An integrated suite of academic tools designed to help students and researchers understand linguistic structure, compare translation engines, memorize terminology, and produce academic rephrasing."}
+                  </p>
+                </div>
+              </div>
+
+              {/* Tool selector tabs */}
+              <div className="px-4 py-3 flex flex-wrap gap-2 border-b border-border bg-secondary/20">
+                {([
+                  { id: "analyzer" as const, icon: <Microscope className="h-3.5 w-3.5" />, label: isRTL ? "المحلل اللغوي" : "Linguistic Analyzer" },
+                  { id: "benchmark" as const, icon: <BarChart2 className="h-3.5 w-3.5" />, label: isRTL ? "مقارنة المحركات" : "Translation Benchmark" },
+                  { id: "flashcards" as const, icon: <BookCopy className="h-3.5 w-3.5" />, label: isRTL ? "بطاقات الاستذكار" : "Academic Flashcards" },
+                  { id: "rephraser" as const, icon: <PenLine className="h-3.5 w-3.5" />, label: isRTL ? "معيد الصياغة" : "Academic Rephraser" },
+                ] as const).map(tool => (
+                  <button
+                    key={tool.id}
+                    id={`tool-tab-${tool.id}`}
+                    onClick={() => setActiveTool(tool.id)}
+                    className={cn(
+                      "tool-tab",
+                      activeTool === tool.id ? "tool-tab-active" : "hover:text-foreground hover:bg-secondary hover:border-border"
+                    )}
+                  >
+                    {tool.icon}
+                    {tool.label}
+                  </button>
+                ))}
+              </div>
+
+              {/* Tool content */}
+              <div className="p-5">
+                <AnimatePresence mode="wait">
+
+                  {/* ── TOOL 1: Linguistic Analyzer ── */}
+                  {activeTool === "analyzer" && (
+                    <motion.div key="analyzer" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+                      <div className="mb-4">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-1">
+                          <Microscope className="h-4 w-4 text-primary" />
+                          {isRTL ? "🛠️ محرك التحليل اللغوي" : "🛠️ Linguistic Analyzer Engine"}
+                        </h3>
+                        <p className="text-[11px] text-muted-foreground">
+                          {isRTL
+                            ? "أدخل نصاً لتحليل بنيته النحوية والدلالية — يُلوّن العناصر اللغوية (أفعال، أسماء، صفات…) ويستخرج المصطلحات المفتاحية والإحصائيات التفصيلية."
+                            : "Enter text to analyze its syntactic and semantic structure — highlights linguistic elements (verbs, nouns, adjectives…) and extracts key terms with detailed statistics."}
+                        </p>
+                      </div>
+                      <div className="mb-3">
+                        <label className="block text-[10px] uppercase font-bold text-muted-foreground tracking-wider mb-1.5">
+                          {isRTL ? "النص المراد تحليله" : "Text to Analyze"}
+                        </label>
+                        <textarea
+                          value={analyzerText}
+                          onChange={e => setAnalyzerText(e.target.value)}
+                          placeholder={isRTL ? "أدخل نصاً بالإنجليزية للتحليل النحوي التفصيلي…" : "Enter English text for detailed syntactic analysis…"}
+                          dir="auto"
+                          rows={4}
+                          className="w-full resize-none bg-card border border-border rounded-lg px-4 py-3 text-sm text-foreground placeholder:text-muted-foreground/40 focus:outline-none focus:ring-1 focus:ring-primary/30 transition-all leading-relaxed"
+                        />
+                      </div>
+                      {analyzerText.trim() && (
+                        <div className="classic-panel rounded-lg p-4">
+                          <LinguisticAnalyzer text={analyzerText} lang="en" standalone />
+                        </div>
+                      )}
+                      {!analyzerText.trim() && (
+                        <div className="text-center py-8 text-muted-foreground/50 text-sm italic">
+                          {isRTL ? "أدخل نصاً أعلاه لبدء التحليل…" : "Enter text above to start analysis…"}
+                        </div>
+                      )}
+                    </motion.div>
+                  )}
+
+                  {/* ── TOOL 2: Translation Benchmark ── */}
+                  {activeTool === "benchmark" && (
+                    <motion.div key="benchmark" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+                      <div className="mb-4">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-1">
+                          <BarChart2 className="h-4 w-4 text-primary" />
+                          {isRTL ? "📊 لوحة مقارنة محركات الترجمة" : "📊 Translation Benchmark Dashboard"}
+                        </h3>
+                        <p className="text-[11px] text-muted-foreground">
+                          {isRTL
+                            ? "قارن ترجمة لغوي السياقية المتخصصة مباشرةً مع Google Translate في صناديق متجاورة لرؤية الفروق الجوهرية."
+                            : "Compare Lughawi's specialized contextual translation directly with Google Translate in side-by-side panels to see the key differences."}
+                        </p>
+                      </div>
+                      <TranslationBenchmark isRTL={isRTL} />
+                    </motion.div>
+                  )}
+
+                  {/* ── TOOL 3: Academic Flashcards ── */}
+                  {activeTool === "flashcards" && (
+                    <motion.div key="flashcards" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+                      <div className="mb-4">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-1">
+                          <BookCopy className="h-4 w-4 text-primary" />
+                          {isRTL ? "🎴 بطاقات الاستذكار الأكاديمية" : "🎴 Academic Terminology Flashcards"}
+                        </h3>
+                        <p className="text-[11px] text-muted-foreground">
+                          {isRTL
+                            ? "اختبر نفسك في حفظ مصطلحات المعاجم المتخصصة (ديني، تقني، طبي، قانوني) وتعلّم نطقها الإنجليزي المعتمد."
+                            : "Test yourself on specialized glossary terminology (religious, technical, medical, legal) and learn their authoritative English equivalents."}
+                        </p>
+                      </div>
+                      <AcademicFlashcards isRTL={isRTL} />
+                    </motion.div>
+                  )}
+
+                  {/* ── TOOL 4: Academic Rephraser ── */}
+                  {activeTool === "rephraser" && (
+                    <motion.div key="rephraser" initial={{ opacity: 0, y: 6 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -6 }} transition={{ duration: 0.2 }}>
+                      <div className="mb-4">
+                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-2 mb-1">
+                          <PenLine className="h-4 w-4 text-primary" />
+                          {isRTL ? "✍️ معيد الصياغة الأكاديمي" : "✍️ Academic Rephraser"}
+                        </h3>
+                        <p className="text-[11px] text-muted-foreground">
+                          {isRTL
+                            ? "أدخل نصاً عادياً، وسيعيد النظام صياغته فوراً بثلاثة أساليب بروتوكولية فصيحة تناسب الأبحاث والرسائل الأكاديمية."
+                            : "Enter plain text and the system instantly rephrases it into three elevated protocol styles suitable for academic research and dissertations."}
+                        </p>
+                      </div>
+                      <AcademicRephraser isRTL={isRTL} />
+                    </motion.div>
+                  )}
+
+                </AnimatePresence>
+              </div>
+            </div>
+          </div>
+        )}
+
       </main>
 
       {/* ═══════════ FOOTER ═══════════ */}
       <footer className="border-t border-border py-5" style={{ background: "var(--card)" }}>
-        <div className="max-w-7xl mx-auto px-5 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-muted-foreground">
+        <div className="max-w-7xl mx-auto px-5 flex flex-col sm:flex-row items-center justify-between gap-5 text-[11px] text-muted-foreground">
 
           {/* Brand + Copyright + Links */}
-          <div className="flex flex-col items-center sm:items-start gap-1">
+          <div className="flex flex-col items-center sm:items-start gap-1.5">
             <div className="flex items-center gap-2">
               <span
                 className="font-bold text-foreground/90 hover:text-foreground transition-colors cursor-default"
@@ -1312,7 +1503,16 @@ function TranslatorPage() {
               جميع الحقوق محفوظة © لمنصة لغوي 2026 | تم التطوير بواسطة{" "}
               <span className="font-semibold text-foreground/60 hover:text-foreground transition-colors cursor-default" title="Platform Developer & Intellectual Property Owner">nrajmi</span>
             </span>
-            <div className="flex items-center gap-3 mt-1 text-[10px] font-medium">
+            {/* Contact email */}
+            <a
+              href="mailto:lughawi.platform@gmail.com"
+              className="flex items-center gap-1.5 text-[10px] text-muted-foreground hover:text-primary transition-colors group"
+              title="التواصل والشكاوي والمقترحات"
+            >
+              <Mail className="h-3 w-3 group-hover:text-primary transition-colors" />
+              <span className="group-hover:underline underline-offset-2">lughawi.platform@gmail.com</span>
+            </a>
+            <div className="flex items-center gap-3 mt-0.5 text-[10px] font-medium">
               <Link to="/about" className="text-muted-foreground hover:text-foreground transition-colors">عن المنصة</Link>
               <Link to="/privacy" className="text-muted-foreground hover:text-foreground transition-colors">سياسة الخصوصية</Link>
               <Link to="/terms" className="text-muted-foreground hover:text-foreground transition-colors">شروط الاستخدام</Link>
@@ -1320,10 +1520,16 @@ function TranslatorPage() {
           </div>
 
           {/* Feature badges */}
-          <div className="flex items-center gap-4 flex-wrap justify-center">
-            <span className="flex items-center gap-1"><Lock className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />{isRTL ? "مشفّر محلياً" : "Locally Encrypted"}</span>
-            <span className="flex items-center gap-1"><Languages className="h-3 w-3 text-primary" />AR · EN · ES</span>
-            <span className="flex items-center gap-1">☽ {isRTL ? "معجم ديني" : "Religious Glossary"}</span>
+          <div className="flex flex-col items-center sm:items-end gap-2">
+            <div className="flex items-center gap-3 flex-wrap justify-center sm:justify-end">
+              <span className="flex items-center gap-1"><Lock className="h-3 w-3 text-emerald-600 dark:text-emerald-400" />{isRTL ? "مشفّر محلياً" : "Locally Encrypted"}</span>
+              <span className="flex items-center gap-1"><Languages className="h-3 w-3 text-primary" />AR · EN · ES</span>
+              <span className="flex items-center gap-1">☽ {isRTL ? "معجم ديني" : "Religious Glossary"}</span>
+            </div>
+            <div className="flex items-center gap-1 text-[10px] text-muted-foreground/60">
+              <Wrench className="h-3 w-3" />
+              <span>{isRTL ? "أدوات لغوية مساعدة" : "Linguistic Auxiliary Tools"}</span>
+            </div>
           </div>
         </div>
       </footer>

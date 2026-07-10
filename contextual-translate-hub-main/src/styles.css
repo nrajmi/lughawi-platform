@@ -302,6 +302,167 @@
   animation: slide-up 0.2s ease forwards;
 }
 
+/* ============================================================
+   LINGUISTIC TOOLS HUB — Utilities
+   ============================================================ */
+
+/* ── Main Page Tab (Translator / Tools) ── */
+@utility main-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.625rem 1.25rem;
+  font-size: 0.8125rem;
+  font-weight: 600;
+  letter-spacing: 0.015em;
+  border-bottom: 2px solid transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: color 0.15s ease, border-color 0.15s ease, background 0.15s ease;
+  white-space: nowrap;
+  user-select: none;
+  background: transparent;
+}
+@utility main-tab-active {
+  color: var(--primary);
+  border-bottom-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 6%, transparent);
+}
+
+/* ── Tool Section Tab (inside Linguistic Tools Hub) ── */
+@utility tool-tab {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  padding: 0.5rem 1rem;
+  font-size: 0.78rem;
+  font-weight: 500;
+  border-radius: 0.375rem;
+  border: 1px solid transparent;
+  color: var(--muted-foreground);
+  cursor: pointer;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+  user-select: none;
+  background: transparent;
+}
+@utility tool-tab-active {
+  color: var(--primary);
+  border-color: var(--primary);
+  background: color-mix(in srgb, var(--primary) 8%, transparent);
+  font-weight: 600;
+}
+
+/* ── Linguistic Annotation Tags ── */
+@utility ling-tag {
+  display: inline;
+  border-radius: 2px;
+  padding: 0 2px;
+  transition: opacity 0.1s;
+}
+@utility ling-noun {
+  color: oklch(0.5 0.16 150);
+  background: oklch(0.5 0.16 150 / 0.10);
+  font-weight: 600;
+}
+.dark .ling-noun {
+  color: oklch(0.72 0.14 150);
+  background: oklch(0.72 0.14 150 / 0.12);
+}
+@utility ling-verb {
+  color: oklch(0.45 0.18 250);
+  background: oklch(0.45 0.18 250 / 0.10);
+  font-weight: 700;
+}
+.dark .ling-verb {
+  color: oklch(0.68 0.16 250);
+  background: oklch(0.68 0.16 250 / 0.12);
+}
+@utility ling-adj {
+  color: oklch(0.55 0.18 75);
+  background: oklch(0.55 0.18 75 / 0.10);
+  font-weight: 600;
+}
+.dark .ling-adj {
+  color: oklch(0.75 0.16 75);
+  background: oklch(0.75 0.16 75 / 0.12);
+}
+@utility ling-adv {
+  color: oklch(0.48 0.18 310);
+  background: oklch(0.48 0.18 310 / 0.10);
+  font-weight: 500;
+}
+.dark .ling-adv {
+  color: oklch(0.72 0.16 310);
+  background: oklch(0.72 0.16 310 / 0.12);
+}
+@utility ling-prep {
+  color: oklch(0.52 0.18 355);
+  background: oklch(0.52 0.18 355 / 0.10);
+  font-weight: 500;
+}
+.dark .ling-prep {
+  color: oklch(0.72 0.16 355);
+  background: oklch(0.72 0.16 355 / 0.12);
+}
+@utility ling-conj {
+  color: oklch(0.55 0.18 40);
+  background: oklch(0.55 0.18 40 / 0.10);
+  font-weight: 500;
+}
+.dark .ling-conj {
+  color: oklch(0.75 0.16 40);
+  background: oklch(0.75 0.16 40 / 0.12);
+}
+@utility ling-pronoun {
+  color: oklch(0.45 0.18 270);
+  background: oklch(0.45 0.18 270 / 0.10);
+  font-weight: 500;
+}
+.dark .ling-pronoun {
+  color: oklch(0.72 0.16 270);
+  background: oklch(0.72 0.16 270 / 0.12);
+}
+
+/* ── Academic Flashcard Flip System ── */
+.flashcard-container {
+  width: 100%;
+  max-width: 380px;
+  height: 240px;
+  perspective: 900px;
+}
+
+.flashcard-inner {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  transition: transform 0.45s cubic-bezier(0.4, 0, 0.2, 1);
+  transform-style: preserve-3d;
+}
+
+.flashcard-flipped {
+  transform: rotateY(180deg);
+}
+
+.flashcard-face {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 1.5rem 1.75rem;
+  border-radius: 0.625rem;
+  border: 1px solid;
+  backface-visibility: hidden;
+  -webkit-backface-visibility: hidden;
+  box-shadow: 0 2px 16px rgba(28, 28, 46, 0.08), 0 0 0 1px rgba(28, 28, 46, 0.04);
+}
+
+.flashcard-back {
+  transform: rotateY(180deg);
+}
+
 /* Legacy aliases (keep for any leftover references) */
 @utility gradient-hero {
   background: linear-gradient(135deg, var(--primary) 0%, var(--accent) 100%);

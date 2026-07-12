@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from 'react';
 import { cn } from '@/lib/utils';
 import { Copy, Check, RotateCcw } from 'lucide-react';
+import { rephraseText } from '@/lib/translate.functions';
 
 interface AcademicRephraserProps {
   isRTL: boolean;
@@ -12,122 +13,6 @@ interface RephrasedOption {
   text: string;
   description: string;
   descriptionAr: string;
-}
-
-// Client-side rephrasing using Gemini API (same key used for translation)
-async function rephrase(text: string): Promise<RephrasedOption[]> {
-  try {
-    const apiKey = (import.meta as any).env?.VITE_GEMINI_API_KEY || '';
-    if (!apiKey) throw new Error('No API key');
-
-    const prompt = `You are an expert academic writing assistant. Rephrase the following text into exactly 3 different academic styles. Return ONLY valid JSON (no markdown, no code blocks) with this exact structure:
-[
-  {
-    "style": "Formal Academic",
-    "text": "...",
-    "description": "Suitable for scholarly journals and dissertations"
-  },
-  {
-    "style": "Analytical Protocol",
-    "text": "...",
-    "description": "Precise analytical language for research methodology"
-  },
-  {
-    "style": "Concise Academic",
-    "text": "...",
-    "description": "Condensed formal academic expression"
-  }
-]
-
-Text to rephrase: "${text.replace(/"/g, '\\"')}"
-
-Rules:
-- Use elevated, formal academic vocabulary
-- Avoid colloquial or informal phrasing  
-- Maintain the core meaning precisely
-- Each version must be distinctly different in style
-- If the text is in Arabic, produce Arabic academic rephrasing
-- If the text is in English, produce English academic rephrasing`;
-
-    const res = await fetch(
-      `https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${apiKey}`,
-      {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          contents: [{ parts: [{ text: prompt }] }],
-          generationConfig: { temperature: 0.7, maxOutputTokens: 1024 },
-        }),
-      }
-    );
-
-    if (!res.ok) throw new Error(`API error: ${res.status}`);
-    const data = await res.json();
-    const raw = data.candidates?.[0]?.content?.parts?.[0]?.text ?? '';
-    
-    // Strip any markdown code blocks if present
-    const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
-    const parsed = JSON.parse(cleaned);
-
-    return parsed.map((item: any) => ({
-      style: item.style,
-      styleAr: item.style,
-      text: item.text,
-      description: item.description,
-      descriptionAr: item.description,
-    }));
-  } catch (e) {
-    // Fallback: simple rule-based transformations for demo
-    const isArabic = /[\u0600-\u06FF]/.test(text);
-    if (isArabic) {
-      return [
-        {
-          style: 'Formal Academic',
-          styleAr: 'أكاديمي رسمي',
-          text: `يُستدل من المعطيات المتاحة أن: ${text}`,
-          description: 'Suitable for scholarly journals and dissertations',
-          descriptionAr: 'مناسب للمجلات العلمية والرسائل الجامعية',
-        },
-        {
-          style: 'Analytical Protocol',
-          styleAr: 'بروتوكول تحليلي',
-          text: `وفقاً للمنهجية التحليلية المعتمدة، يتبيّن ما يلي: ${text}`,
-          description: 'Precise analytical language for research methodology',
-          descriptionAr: 'لغة تحليلية دقيقة لمنهجية البحث العلمي',
-        },
-        {
-          style: 'Concise Academic',
-          styleAr: 'مختصر أكاديمي',
-          text: `خلاصة القول: ${text}`,
-          description: 'Condensed formal academic expression',
-          descriptionAr: 'تعبير أكاديمي رسمي موجز',
-        },
-      ];
-    }
-    return [
-      {
-        style: 'Formal Academic',
-        styleAr: 'أكاديمي رسمي',
-        text: `It is evident from the available evidence that: ${text}`,
-        description: 'Suitable for scholarly journals and dissertations',
-        descriptionAr: 'مناسب للمجلات العلمية والرسائل الجامعية',
-      },
-      {
-        style: 'Analytical Protocol',
-        styleAr: 'بروتوكول تحليلي',
-        text: `Based on rigorous analytical methodology, the following is ascertained: ${text}`,
-        description: 'Precise analytical language for research methodology',
-        descriptionAr: 'لغة تحليلية دقيقة لمنهجية البحث',
-      },
-      {
-        style: 'Concise Academic',
-        styleAr: 'مختصر أكاديمي',
-        text: `In summation: ${text}`,
-        description: 'Condensed formal academic expression',
-        descriptionAr: 'تعبير أكاديمي رسمي موجز',
-      },
-    ];
-  }
 }
 
 export function AcademicRephraser({ isRTL }: AcademicRephraserProps) {
@@ -143,8 +28,8 @@ export function AcademicRephraser({ isRTL }: AcademicRephraserProps) {
     setHasRun(true);
     setResults([]);
 
-    const rephrased = await rephrase(input.trim());
-    setResults(rephrased);
+    const rephrased = await rephraseText({ data: { text: input.trim() } });
+    setResults(rephrased as RephrasedOption[]);
     setLoading(false);
   }, [input]);
 

@@ -626,16 +626,23 @@ function TranslatorPage() {
               </div>
 
               <div
-                className={cn("flex-1 p-4 leading-relaxed font-sans", loading && "loading-shimmer", !output && "italic text-muted-foreground/40")}
+                className={cn("flex-1 p-4 leading-relaxed font-sans relative", loading && "opacity-70 transition-opacity", !output && "italic text-muted-foreground/40")}
                 dir={targetIsRTL ? "rtl" : "ltr"}
                 style={{ fontSize: `${fontSize}px` }}
               >
-                {!output
-                  ? (loading ? t.translating : t.outputPlaceholder)
-                  : showAnalysis
-                    ? <LinguisticAnalyzer text={output} lang={target} />
-                    : <div className="whitespace-pre-wrap">{output}</div>
-                }
+                {loading && (
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-[2px] z-10">
+                    <div className="flex flex-col items-center gap-2">
+                      <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
+                      <span className="text-[10px] font-medium text-primary uppercase tracking-widest">{t.translating}</span>
+                    </div>
+                  </div>
+                )}
+                {!output && !loading && (
+                  <>{t.outputPlaceholder}</>
+                )}
+                {output && showAnalysis && <LinguisticAnalyzer text={output} lang={target} />}
+                {output && !showAnalysis && <div className="whitespace-pre-wrap relative z-0">{output}</div>}
               </div>
 
               <div className="px-4 py-2 border-t border-border bg-secondary/20 flex items-center justify-between text-[11px] text-muted-foreground">

@@ -29,12 +29,12 @@ async function googleTranslate(text: string, target: string): Promise<string> {
   }
 }
 
-const DOMAINS_BENCH: { value: DictionaryDomain; label: string; icon: string }[] = [
-  { value: 'general', label: 'عام', icon: '✦' },
-  { value: 'medical', label: 'طبي', icon: '⚕' },
-  { value: 'legal', label: 'قانوني', icon: '⚖' },
-  { value: 'tech', label: 'تقني', icon: '⌨' },
-  { value: 'religious', label: 'ديني', icon: '☽' },
+const DOMAINS_BENCH: { value: DictionaryDomain; label: {ar: string; en: string}; icon: string }[] = [
+  { value: 'general', label: {ar: 'عام', en: 'General'}, icon: '✦' },
+  { value: 'medical', label: {ar: 'طبي', en: 'Medical'}, icon: '⚕' },
+  { value: 'legal', label: {ar: 'قانوني', en: 'Legal'}, icon: '⚖' },
+  { value: 'tech', label: {ar: 'تقني', en: 'Technical'}, icon: '⌨' },
+  { value: 'religious', label: {ar: 'ديني', en: 'Religious'}, icon: '☽' },
 ];
 
 export function TranslationBenchmark({ isRTL }: TranslationBenchmarkProps) {
@@ -102,7 +102,7 @@ export function TranslationBenchmark({ isRTL }: TranslationBenchmarkProps) {
                     : 'bg-secondary border-border text-muted-foreground hover:text-foreground hover:border-primary/30'
                 )}
               >
-                {d.icon} {d.label}
+                {d.icon} {isRTL ? d.label.ar : d.label.en}
               </button>
             ))}
           </div>

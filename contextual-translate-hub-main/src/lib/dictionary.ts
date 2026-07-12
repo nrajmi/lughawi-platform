@@ -73,7 +73,7 @@ export function localTranslateFallback(
   };
   const currentPrefix = prefixes[tone][target as keyof typeof prefixes["general"]] || "";
 
-  let translated = resultText === text ? `(Offline translation) ${text}` : `${currentPrefix}${resultText}`;
+  let translated = resultText === text ? resultText : `${currentPrefix}${resultText}`;
 
   const terms = matches.map((m) => {
     const matchedTerm = m.translations[target as keyof typeof m.translations];

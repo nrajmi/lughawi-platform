@@ -164,8 +164,8 @@ Your linguistic doctrine:
         const tl = data.target;
         
         const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodedText}`;
-        const res = await fetch(url);
-        if (!res.ok) throw new Error(`Google Translate API error: ${res.status}`);
+        const res = await fetch(url, { headers: { "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64)" } });
+        if (!res.ok) throw new Error(`CLIENT_FALLBACK_REQUIRED`);
         const json = await res.json();
         
         if (Array.isArray(json) && Array.isArray(json[0])) {
@@ -197,8 +197,12 @@ Your linguistic doctrine:
 
       return { translated, detected: detected || data.source, terms };
     } catch (error) {
-      console.error("Translation error, falling back to local:", error);
-      return localTranslateFallback(sanitizedText, data.source, data.target, data.tone, data.domain);
+      console.error("Translation error:", error);
+      if (error instanceof Error && error.message.includes("CLIENT_FALLBACK_REQUIRED")) {
+        throw error; // Let the frontend catch this and handle browser fetch
+      }
+      // If it's another error, also throw to trigger frontend fallback
+      throw new Error("CLIENT_FALLBACK_REQUIRED");
     }
   });
 

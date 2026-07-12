@@ -173,14 +173,53 @@ function TranslatorPage() {
       } catch (err) {
         console.error("Translation failed:", err);
         const msg = err instanceof Error ? err.message : "";
-        setOutput(
-          msg.includes("quota") || msg.includes("429")
-            ? "عذراً، تم استنفاد الحد المسموح من الطلبات. يرجى المحاولة لاحقاً. (API Quota Exhausted)"
-            : msg.includes("timeout")
-            ? "عذراً، استغرق الاتصال وقتاً أطول من اللازم. يرجى التحقق من الشبكة والمحاولة مجدداً. (Timeout)"
-            : "حدث خطأ غير متوقع أثناء الترجمة. يرجى المحاولة مرة أخرى لاحقاً."
-        );
-        setTerms([]);
+        if (msg.includes("CLIENT_FALLBACK_REQUIRED")) {
+          try {
+            const clean = sanitizeInput(input);
+            const sl = source === 'auto' ? 'auto' : source;
+            const tl = target;
+            const url = `https://translate.googleapis.com/translate_a/single?client=gtx&sl=${sl}&tl=${tl}&dt=t&q=${encodeURIComponent(clean)}`;
+            const resFallback = await fetch(url);
+            if (!resFallback.ok) throw new Error("Browser fallback failed");
+            const json = await resFallback.json();
+            const translatedFallback = json[0].map((item: any) => item[0]).join('');
+            const detectedFallback = source === "auto" ? (json[2] || source) : source;
+            
+            const localMatches = findDictionaryMatches(clean, tone, domain);
+            const fallbackTerms: {term: string, note: string}[] = [];
+            localMatches.forEach((localItem) => {
+              const detectedKey = (detectedFallback === "ar" || detectedFallback === "en" || detectedFallback === "es") ? detectedFallback : "en";
+              const srcVal = localItem.translations[detectedKey as keyof typeof localItem.translations] || localItem.term;
+              const targetTranslation = localItem.translations[target as keyof typeof localItem.translations];
+              const nuanceNote = localItem.nuances[tone]?.[target as keyof typeof localItem.nuances["general"]];
+              if (targetTranslation && nuanceNote && !fallbackTerms.some(t => t.term.toLowerCase() === srcVal.toLowerCase())) {
+                fallbackTerms.push({ term: srcVal, note: `-> ${targetTranslation}: ${nuanceNote}` });
+              }
+            });
+            
+            setOutput(translatedFallback);
+            setDetected(detectedFallback);
+            setTerms(fallbackTerms);
+            const item: HistoryItem = { id: crypto.randomUUID(), source: detectedFallback, target, sourceText: clean, translated: translatedFallback, tone, domain, at: Date.now() };
+            setHistory(prev => { const next = [item, ...prev.filter(p => p.sourceText !== clean)].slice(0, 30); saveHistory(next); return next; });
+          } catch (fallbackErr) {
+            setOutput(
+              isRTL 
+                ? "⚠️ عذراً، لا يمكن الوصول لمحرك الترجمة. يرجى التأكد من اتصالك بالإنترنت أو إعداد مفتاح API الخاص بـ Gemini."
+                : "⚠️ Sorry, translation engine is unreachable. Please check your internet connection or your Gemini API key setup."
+            );
+            setTerms([]);
+          }
+        } else {
+          setOutput(
+            msg.includes("quota") || msg.includes("429")
+              ? "عذراً، تم استنفاد الحد المسموح من الطلبات. يرجى المحاولة لاحقاً. (API Quota Exhausted)"
+              : msg.includes("timeout")
+              ? "عذراً، استغرق الاتصال وقتاً أطول من اللازم. يرجى التحقق من الشبكة والمحاولة مجدداً. (Timeout)"
+              : "حدث خطأ غير متوقع أثناء الترجمة. يرجى المحاولة مرة أخرى لاحقاً."
+          );
+          setTerms([]);
+        }
       }
       finally { setLoading(false); }
     }, 700);

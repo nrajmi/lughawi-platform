@@ -1,18 +1,16 @@
 import { defineConfig } from "vite";
 import { tanstackStart } from "@tanstack/react-start/plugin/vite";
-import tsConfigPaths from "vite-tsconfig-paths";
 import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
+import netlify from '@netlify/vite-plugin-tanstack-start';
 
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    tsConfigPaths({ projects: ["./tsconfig.json"] }),
-    tanstackStart({
-      server: { entry: "server" },
-    }),
+    tanstackStart(),
+    netlify(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',
@@ -63,6 +61,7 @@ export default defineConfig({
     alias: {
       "@": path.resolve(__dirname, "./src"),
     },
+    tsconfigPaths: true,
   },
   server: {
     port: 8080,

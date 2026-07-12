@@ -43,6 +43,7 @@ import { AcademicRephraser } from "@/components/AcademicRephraser";
 import { fetchWordDetails, type DictionaryApiResponse } from "@/lib/dictionary-api";
 import { getPredictions } from "@/lib/predictive-text";
 import { motion, AnimatePresence } from "framer-motion";
+import { diagnosticService, type DiagnosticAlert } from "@/lib/SelfDiagnosticService";
 
 export const Route = createFileRoute("/")({
   component: TranslatorPage,
@@ -110,6 +111,7 @@ function TranslatorPage() {
   const [isDark, setIsDark] = useState(false);
   const [copied, setCopied] = useState<"in" | "out" | null>(null);
   const [uiLanguage, setUiLanguage] = useState<UILang>("ar");
+  const [diagnosticAlert, setDiagnosticAlert] = useState<DiagnosticAlert | null>(null);
   const [dictQuery, setDictQuery] = useState("");
   const [dictResult, setDictResult] = useState<DictionaryApiResponse | null>(null);
   const [isDictLoading, setIsDictLoading] = useState(false);
@@ -158,10 +160,11 @@ function TranslatorPage() {
   };
 
   useEffect(() => {
-    if (!input.trim()) { setOutput(""); setDetected(null); setTerms([]); return; }
+    if (!input.trim()) { setOutput(""); setDetected(null); setTerms([]); setDiagnosticAlert(null); return; }
     if (debounceRef.current) window.clearTimeout(debounceRef.current);
     debounceRef.current = window.setTimeout(async () => {
       setLoading(true);
+      setDiagnosticAlert(null);
       try {
         const clean = sanitizeInput(input);
         const res = await translateText({ data: { text: clean, source, target, tone, domain } });
@@ -203,21 +206,13 @@ function TranslatorPage() {
             const item: HistoryItem = { id: crypto.randomUUID(), source: detectedFallback, target, sourceText: clean, translated: translatedFallback, tone, domain, at: Date.now() };
             setHistory(prev => { const next = [item, ...prev.filter(p => p.sourceText !== clean)].slice(0, 30); saveHistory(next); return next; });
           } catch (fallbackErr) {
-            setOutput(
-              isRTL 
-                ? "⚠️ عذراً، لا يمكن الوصول لمحرك الترجمة. يرجى التأكد من اتصالك بالإنترنت أو إعداد مفتاح API الخاص بـ Gemini."
-                : "⚠️ Sorry, translation engine is unreachable. Please check your internet connection or your Gemini API key setup."
-            );
+            setDiagnosticAlert(diagnosticService.analyzeError(fallbackErr));
+            setOutput("");
             setTerms([]);
           }
         } else {
-          setOutput(
-            msg.includes("quota") || msg.includes("429")
-              ? "عذراً، تم استنفاد الحد المسموح من الطلبات. يرجى المحاولة لاحقاً. (API Quota Exhausted)"
-              : msg.includes("timeout")
-              ? "عذراً، استغرق الاتصال وقتاً أطول من اللازم. يرجى التحقق من الشبكة والمحاولة مجدداً. (Timeout)"
-              : "حدث خطأ غير متوقع أثناء الترجمة. يرجى المحاولة مرة أخرى لاحقاً."
-          );
+          setDiagnosticAlert(diagnosticService.analyzeError(err));
+          setOutput("");
           setTerms([]);
         }
       }
@@ -665,23 +660,43 @@ function TranslatorPage() {
               </div>
 
               <div
-                className={cn("flex-1 p-4 leading-relaxed font-sans relative", loading && "opacity-70 transition-opacity", !output && "italic text-muted-foreground/40")}
+                className={cn("flex-1 p-4 leading-relaxed font-sans relative overflow-hidden", loading && "opacity-80 transition-opacity", !output && "italic text-muted-foreground/40")}
                 dir={targetIsRTL ? "rtl" : "ltr"}
                 style={{ fontSize: `${fontSize}px` }}
               >
                 {loading && (
-                  <div className="absolute inset-0 flex items-center justify-center bg-background/50 backdrop-blur-[2px] z-10">
-                    <div className="flex flex-col items-center gap-2">
-                      <div className="w-5 h-5 border-2 border-primary/30 border-t-primary rounded-full animate-spin"></div>
-                      <span className="text-[10px] font-medium text-primary uppercase tracking-widest">{t.translating}</span>
+                  <div className="absolute inset-0 flex items-center justify-center bg-background/60 backdrop-blur-[2px] z-10">
+                    <div className="flex flex-col items-center gap-3">
+                      <div className="w-8 h-8 border-[3px] border-primary/20 border-t-primary rounded-full animate-spin"></div>
+                      <span className="text-xs font-bold text-primary tracking-widest">{t.translating}</span>
                     </div>
                   </div>
                 )}
-                {!output && !loading && (
+                
+                {diagnosticAlert && !loading && (
+                  <div className="absolute inset-0 z-20 flex flex-col items-center justify-center bg-background p-6" dir="auto">
+                    <div className={cn(
+                      "p-5 rounded-xl border w-full max-w-sm text-center shadow-sm animate-in zoom-in-95 duration-200",
+                      diagnosticAlert.type === "API_TIMEOUT" ? "bg-orange-500/10 border-orange-500/30 text-orange-700 dark:text-orange-400" :
+                      diagnosticAlert.type === "ZOD_SCHEMA_MISMATCH" ? "bg-amber-500/10 border-amber-500/30 text-amber-700 dark:text-amber-400" :
+                      diagnosticAlert.type === "NETWORK_DISCONNECT" ? "bg-red-500/10 border-red-500/30 text-red-700 dark:text-red-400" :
+                      diagnosticAlert.type === "LLM_HALLUCINATION" ? "bg-purple-500/10 border-purple-500/30 text-purple-700 dark:text-purple-400" :
+                      "bg-destructive/10 border-destructive/30 text-destructive"
+                    )}>
+                      <h3 className="font-bold text-[15px] mb-2">{diagnosticAlert.title}</h3>
+                      <p className="text-xs opacity-90 leading-relaxed font-medium">{diagnosticAlert.message}</p>
+                      <div className="mt-4 pt-3 border-t border-current/20 text-[10px] opacity-70 font-mono">
+                        {diagnosticAlert.type}
+                      </div>
+                    </div>
+                  </div>
+                )}
+
+                {!output && !loading && !diagnosticAlert && (
                   <>{t.outputPlaceholder}</>
                 )}
-                {output && showAnalysis && <LinguisticAnalyzer text={output} lang={target} />}
-                {output && !showAnalysis && <div className="whitespace-pre-wrap relative z-0">{output}</div>}
+                {output && !diagnosticAlert && showAnalysis && <LinguisticAnalyzer text={output} lang={target} />}
+                {output && !diagnosticAlert && !showAnalysis && <div className="whitespace-pre-wrap relative z-0">{output}</div>}
               </div>
 
               <div className="px-4 py-2 border-t border-border bg-secondary/20 flex items-center justify-between text-[11px] text-muted-foreground">

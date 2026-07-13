@@ -49,7 +49,7 @@ export const translateText = createServerFn({ method: "POST" })
       const targetLang = LANG_NAMES[data.target] || data.target;
 
       // Try Gemini API first if available
-      const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+      const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (geminiApiKey) {
         const { GoogleGenAI } = await import("@google/genai");
         const ai = new GoogleGenAI({ apiKey: geminiApiKey });
@@ -223,7 +223,7 @@ export const rephraseText = createServerFn({ method: "POST" })
     const sanitizedText = sanitizeInput(data.text);
     
     try {
-      const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+      const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
       if (!geminiApiKey) {
         throw new Error("API key not configured");
       }

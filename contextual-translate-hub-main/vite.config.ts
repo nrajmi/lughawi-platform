@@ -4,13 +4,11 @@ import react from "@vitejs/plugin-react";
 import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
-import netlify from '@netlify/vite-plugin-tanstack-start';
 
 export default defineConfig({
   plugins: [
     tailwindcss(),
     tanstackStart(),
-    netlify(),
     react(),
     VitePWA({
       registerType: 'autoUpdate',

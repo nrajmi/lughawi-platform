@@ -6,20 +6,14 @@ const ssrPath = path.resolve('.vercel/output/functions/__server.func/_ssr/ssr.mj
 if (fs.existsSync(ssrPath)) {
   let content = fs.readFileSync(ssrPath, 'utf8');
   
-  // Patch normalizeCatastrophicSsrResponse
+  // Replace both instances using Regex to ignore whitespaces and line endings
   content = content.replace(
-    'console.error(consumeLastCapturedError() ?? /* @__PURE__ */ new Error(`h3 swallowed SSR error: ${body}`));\n\treturn new Response(renderErrorPage(), {',
-    'const actualError = consumeLastCapturedError() ?? new Error(`h3 swallowed SSR error: ${body}`);\n\tconsole.error(actualError);\n\treturn new Response(String(actualError.stack || actualError) + renderErrorPage(), {'
-  );
-
-  // Patch server_default fetch catch block
-  content = content.replace(
-    'console.error(error);\n\t\treturn new Response(renderErrorPage(), {',
-    'console.error(error);\n\t\treturn new Response("<pre style=\\"color:red;padding:20px;background:black\\">" + String(error.stack || error) + "</pre>" + renderErrorPage(), {'
+    /return new Response\(renderErrorPage\(\),\s*\{/g,
+    'return new Response("<pre style=\\"color:red;padding:20px;background:black;white-space:pre-wrap;z-index:9999;position:relative\\">" + String(typeof error !== "undefined" ? (error.stack || error) : (typeof actualError !== "undefined" ? (actualError.stack || actualError) : "Unknown Error")) + "</pre>" + renderErrorPage(), {'
   );
 
   fs.writeFileSync(ssrPath, content, 'utf8');
-  console.log('Successfully patched ssr.mjs to display errors on Vercel.');
+  console.log('Successfully patched ssr.mjs with REGEX to display errors on Vercel.');
 } else {
   console.log('ssr.mjs not found, skipping patch.');
 }

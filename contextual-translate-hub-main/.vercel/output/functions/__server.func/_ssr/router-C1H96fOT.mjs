@@ -4,7 +4,7 @@ import { c as HeadContent, d as Outlet, f as lazyRouteComponent, g as useRouter,
 import { n as diagnosticService, t as cn } from "./utils-C2plKBZU.mjs";
 import { t as QueryClient } from "../_libs/tanstack__query-core.mjs";
 import { a as Unplug, d as ServerCrash, j as BrainCircuit, o as TriangleAlert, p as RefreshCw } from "../_libs/lucide-react.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/router-CZU2Xxh9.js
+//#region node_modules/.nitro/vite/services/ssr/assets/router-C1H96fOT.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var GlobalErrorBoundary = class extends import_react.Component {
@@ -105,7 +105,7 @@ var GlobalErrorBoundary = class extends import_react.Component {
 		return this.props.children;
 	}
 };
-var styles_default = "/assets/styles-CS7IA_ic.css";
+var styles_default = "/assets/styles-CgpNJPe1.css";
 function NotFoundComponent() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsx)("div", {
 		className: "flex min-h-screen items-center justify-center bg-background px-4",
@@ -152,6 +152,23 @@ function ErrorComponent({ error, reset }) {
 				/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 					className: "mt-2 text-sm text-muted-foreground",
 					children: "Something went wrong on our end. You can try refreshing or head back home."
+				}),
+				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
+					className: "mt-4 p-4 bg-destructive/10 border border-destructive/20 text-destructive text-left text-xs font-mono rounded-lg overflow-auto max-h-[300px] w-full",
+					dir: "ltr",
+					children: [
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("strong", {
+							className: "block mb-2 text-sm",
+							children: "Diagnostic Info:"
+						}),
+						error.message || String(error),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {}),
+						/* @__PURE__ */ (0, import_jsx_runtime.jsx)("br", {}),
+						error.stack && /* @__PURE__ */ (0, import_jsx_runtime.jsx)("span", {
+							className: "opacity-70 whitespace-pre-wrap",
+							children: error.stack
+						})
+					]
 				}),
 				/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 					className: "mt-6 flex flex-wrap justify-center gap-2",

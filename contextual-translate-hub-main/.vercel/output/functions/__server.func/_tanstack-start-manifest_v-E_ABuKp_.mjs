@@ -1,4 +1,4 @@
-//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-hhSyQdO6.js
+//#region node_modules/.nitro/vite/services/ssr/assets/_tanstack-start-manifest_v-E_ABuKp_.js
 var tsrStartManifest = () => ({ routes: {
 	__root__: {
 		filePath: "C:/Users/nr101/Desktop/مشاريعي بشكل عام/مشروع موقع ترجمة/contextual-translate-hub-main/contextual-translate-hub-main/src/routes/__root.tsx",
@@ -8,32 +8,32 @@ var tsrStartManifest = () => ({ routes: {
 			"/privacy",
 			"/terms"
 		],
-		preloads: ["/assets/index-C2DEwi3r.js"],
+		preloads: ["/assets/index-Dzig06yW.js"],
 		scripts: [{ attrs: {
 			type: "module",
 			async: !0,
-			src: "/assets/index-C2DEwi3r.js"
+			src: "/assets/index-Dzig06yW.js"
 		} }]
 	},
 	"/": {
 		filePath: "C:/Users/nr101/Desktop/مشاريعي بشكل عام/مشروع موقع ترجمة/contextual-translate-hub-main/contextual-translate-hub-main/src/routes/index.tsx",
 		children: void 0,
-		preloads: ["/assets/routes-BY3-7htf.js"]
+		preloads: ["/assets/routes-2O4GrDFg.js"]
 	},
 	"/about": {
 		filePath: "C:/Users/nr101/Desktop/مشاريعي بشكل عام/مشروع موقع ترجمة/contextual-translate-hub-main/contextual-translate-hub-main/src/routes/about.tsx",
 		children: void 0,
-		preloads: ["/assets/about-CSJfoUZT.js"]
+		preloads: ["/assets/about-XlSkUrZ8.js"]
 	},
 	"/privacy": {
 		filePath: "C:/Users/nr101/Desktop/مشاريعي بشكل عام/مشروع موقع ترجمة/contextual-translate-hub-main/contextual-translate-hub-main/src/routes/privacy.tsx",
 		children: void 0,
-		preloads: ["/assets/privacy-DAFga4Gj.js"]
+		preloads: ["/assets/privacy-BK3D_YvQ.js"]
 	},
 	"/terms": {
 		filePath: "C:/Users/nr101/Desktop/مشاريعي بشكل عام/مشروع موقع ترجمة/contextual-translate-hub-main/contextual-translate-hub-main/src/routes/terms.tsx",
 		children: void 0,
-		preloads: ["/assets/terms-Dajb6W7n.js"]
+		preloads: ["/assets/terms-WyerOG49.js"]
 	}
 } });
 //#endregion

@@ -44,7 +44,7 @@ function createSupabaseAdminClient() {
 
   return createClient<Database>(SUPABASE_URL || 'https://placeholder.supabase.co', SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key', {
     global: {
-      fetch: createSupabaseFetch(SUPABASE_SERVICE_ROLE_KEY),
+      fetch: createSupabaseFetch(SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key'),
     },
     auth: {
       storage: undefined,

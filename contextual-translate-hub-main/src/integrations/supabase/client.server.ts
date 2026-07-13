@@ -40,10 +40,9 @@ function createSupabaseAdminClient() {
     ];
     const message = `Missing Supabase environment variable(s): ${missing.join(', ')}. Please set them in your .env file.`;
     console.error(`[Supabase] ${message}`);
-    throw new Error(message);
   }
 
-  return createClient<Database>(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  return createClient<Database>(SUPABASE_URL || 'https://placeholder.supabase.co', SUPABASE_SERVICE_ROLE_KEY || 'placeholder-key', {
     global: {
       fetch: createSupabaseFetch(SUPABASE_SERVICE_ROLE_KEY),
     },

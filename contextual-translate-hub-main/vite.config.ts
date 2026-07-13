@@ -5,13 +5,10 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 
 
-import { nitro } from 'nitro/vite';
-
 export default defineConfig({
   plugins: [
     tailwindcss(),
     tanstackStart(),
-    nitro({ preset: 'vercel' }),
     react(),
   ],
   resolve: {

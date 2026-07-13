@@ -5,10 +5,13 @@ import tailwindcss from "@tailwindcss/vite";
 import path from "path";
 import { VitePWA } from "vite-plugin-pwa";
 
+import { nitro } from 'nitro/vite';
+
 export default defineConfig({
   plugins: [
     tailwindcss(),
     tanstackStart(),
+    nitro({ preset: 'vercel' }),
     react(),
     VitePWA({
       registerType: 'autoUpdate',

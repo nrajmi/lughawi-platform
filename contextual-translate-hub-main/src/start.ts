@@ -10,11 +10,14 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
     if (error != null && typeof error === "object" && "statusCode" in error) {
       throw error;
     }
-    console.error(error);
-    return new Response(renderErrorPage(), {
-      status: 500,
-      headers: { "content-type": "text/html; charset=utf-8" },
-    });
+    console.error("SSR CRASH CAUGHT BY ERROR MIDDLEWARE:", error);
+    return new Response(
+      "<pre style=\"color:red;padding:20px;background:black;white-space:pre-wrap;font-size:14px;position:relative;z-index:9999\">SSR CRASH: " + String((error as any)?.stack || error) + "</pre>" + renderErrorPage(),
+      {
+        status: 500,
+        headers: { "content-type": "text/html; charset=utf-8" },
+      }
+    );
   }
 });
 

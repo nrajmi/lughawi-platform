@@ -7,9 +7,6 @@ const errorMiddleware = createMiddleware().server(async ({ next }) => {
   try {
     return await next();
   } catch (error) {
-    if (error != null && typeof error === "object" && "statusCode" in error) {
-      throw error;
-    }
     console.error("SSR CRASH CAUGHT BY ERROR MIDDLEWARE:", error);
     return new Response(
       "<pre style=\"color:red;padding:20px;background:black;white-space:pre-wrap;font-size:14px;position:relative;z-index:9999\">SSR CRASH: " + String((error as any)?.stack || error) + "</pre>" + renderErrorPage(),

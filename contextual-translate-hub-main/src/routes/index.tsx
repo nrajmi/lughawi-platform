@@ -30,7 +30,7 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { LANGUAGES, TONES, type Tone } from "@/lib/translate";
-import { translateText } from "@/lib/translate.functions";
+import { translateText, analyzeMorphology } from "@/lib/translate.functions";
 import { initTheme, toggleTheme, getTheme } from "@/lib/theme";
 import { sanitizeInput, encryptData, decryptData } from "@/lib/security";
 import { UI_TRANSLATIONS, type UILang } from "@/lib/uiTranslations";
@@ -44,6 +44,158 @@ import { fetchWordDetails, type DictionaryApiResponse } from "@/lib/dictionary-a
 import { getPredictions } from "@/lib/predictive-text";
 import { motion, AnimatePresence } from "framer-motion";
 import { diagnosticService, type DiagnosticAlert } from "@/lib/SelfDiagnosticService";
+import React from "react";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// LEXICOGRAPHER MODE — وضع المعجمي — Phonetic Card
+// ─────────────────────────────────────────────────────────────────────────────
+
+/**
+ * Strict single-word detection: returns true ONLY if input is one token
+ * (no spaces/newlines) with at least 2 characters.
+ */
+function isSingleWord(text: string): boolean {
+  const trimmed = text.trim();
+  if (!trimmed || trimmed.length < 2) return false;
+  return !/\s/.test(trimmed);
+}
+
+type PhoneticInfo = {
+  ipa: string;
+  pronunciation_guide: string;
+} | null;
+
+function PhoneticCard({
+  word,
+  lang,
+  isRTL,
+}: {
+  word: string;
+  lang: string;
+  isRTL: boolean;
+}) {
+  const [phonetic, setPhonetic] = React.useState<PhoneticInfo>(null);
+  const [isLoading, setIsLoading] = React.useState(false);
+  const [isSpeaking, setIsSpeaking] = React.useState(false);
+  const prevWordRef = React.useRef("");
+
+  React.useEffect(() => {
+    if (!word || prevWordRef.current === word) return;
+    prevWordRef.current = word;
+    setIsLoading(true);
+    setPhonetic(null);
+
+    (async () => {
+      try {
+        const result = await analyzeMorphology({ data: { text: word, lang } });
+        const firstToken = result.tokens[0];
+        setPhonetic({
+          ipa: firstToken?.lemma ? `/${firstToken.lemma}/` : `/${word}/`,
+          pronunciation_guide: firstToken?.gloss || "",
+        });
+      } catch {
+        setPhonetic({ ipa: `/${word}/`, pronunciation_guide: "" });
+      } finally {
+        setIsLoading(false);
+      }
+    })();
+  }, [word, lang]);
+
+  const handleSpeak = () => {
+    if (!(typeof window !== "undefined" && "speechSynthesis" in window)) return;
+    window.speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(word);
+    u.lang = lang === "ar" ? "ar-SA" : lang === "es" ? "es-ES" : "en-US";
+    u.rate = 0.82;
+    u.pitch = 1.0;
+    u.onstart = () => setIsSpeaking(true);
+    u.onend = () => setIsSpeaking(false);
+    u.onerror = () => setIsSpeaking(false);
+    window.speechSynthesis.speak(u);
+  };
+
+  const hasSpeech = typeof window !== "undefined" && "speechSynthesis" in window;
+
+  return (
+    <motion.div
+      key={word}
+      initial={{ opacity: 0, y: -10, scale: 0.97 }}
+      animate={{ opacity: 1, y: 0, scale: 1 }}
+      exit={{ opacity: 0, y: -8, scale: 0.97 }}
+      transition={{ duration: 0.22, ease: "easeOut" }}
+      className="classic-panel rounded-lg mb-4 overflow-hidden"
+    >
+      {/* Header */}
+      <div className="px-4 py-2.5 bg-gradient-to-r from-primary/8 to-primary/3 dark:from-primary/12 dark:to-primary/4 border-b border-border flex items-center justify-between">
+        <div className="flex items-center gap-2">
+          <div className="w-5 h-5 rounded bg-primary/15 flex items-center justify-center">
+            <span className="text-primary text-[10px] font-bold font-serif">𝛼</span>
+          </div>
+          <span className="text-[11px] font-bold text-foreground uppercase tracking-wider">
+            {isRTL ? "وضع المعجمي — النظام الصوتي" : "Lexicographer Mode — Phonetics"}
+          </span>
+        </div>
+        <span className="text-[10px] text-muted-foreground/50 font-mono italic">
+          {isRTL ? "كلمة مفردة" : "single word"}
+        </span>
+      </div>
+
+      {/* Body */}
+      <div className="p-4 flex items-center gap-5" dir="ltr">
+        {/* Word + IPA */}
+        <div className="flex-1">
+          <div className="text-2xl font-bold text-foreground tracking-tight mb-1" dir="auto">
+            {word}
+          </div>
+          {isLoading ? (
+            <div className="flex items-center gap-1.5 text-[11px] text-muted-foreground">
+              <div className="w-3 h-3 border-2 border-primary/30 border-t-primary rounded-full animate-spin" />
+              {isRTL ? "جارٍ توليد النظام الصوتي…" : "Generating phonetics…"}
+            </div>
+          ) : phonetic ? (
+            <>
+              <div className="font-mono text-sm text-primary/80 mb-0.5 tracking-widest">
+                {phonetic.ipa}
+              </div>
+              {phonetic.pronunciation_guide && (
+                <div className="text-[11px] text-muted-foreground italic">
+                  {phonetic.pronunciation_guide}
+                </div>
+              )}
+            </>
+          ) : null}
+        </div>
+
+        {/* Listen Button */}
+        {hasSpeech && (
+          <button
+            onClick={handleSpeak}
+            disabled={isSpeaking}
+            className={[
+              "flex flex-col items-center gap-1 px-4 py-2.5 rounded-xl border-2 transition-all duration-200 group",
+              isSpeaking
+                ? "border-primary bg-primary/10 text-primary scale-95"
+                : "border-border hover:border-primary/50 hover:bg-primary/5 hover:text-primary text-muted-foreground",
+            ].join(" ")}
+            title={isRTL ? "استماع للنطق الصحيح" : "Listen to pronunciation"}
+          >
+            <div className={[
+              "w-9 h-9 rounded-full flex items-center justify-center transition-all",
+              isSpeaking ? "bg-primary/20" : "bg-secondary group-hover:bg-primary/10",
+            ].join(" ")}>
+              <Volume2 className={`h-4 w-4 transition-transform ${isSpeaking ? "scale-125" : ""}`} />
+            </div>
+            <span className="text-[10px] font-semibold uppercase tracking-wide">
+              {isSpeaking
+                ? (isRTL ? "يُنطق…" : "Playing…")
+                : (isRTL ? "استماع" : "Listen")}
+            </span>
+          </button>
+        )}
+      </div>
+    </motion.div>
+  );
+}
 
 export const Route = createFileRoute("/")({
   component: TranslatorPage,
@@ -733,6 +885,18 @@ function TranslatorPage() {
             {copied === "out" ? (isRTL ? "تم النسخ!" : "Copied!") : (isRTL ? "نسخ النص المترجم" : "Copy Translation")}
           </button>
         </div>
+
+        {/* ══════════ LEXICOGRAPHER MODE — PHONETIC CARD ══════════ */}
+        {/* Appears ONLY when input is a single word — disappears for sentences */}
+        <AnimatePresence>
+          {isSingleWord(input) && (
+            <PhoneticCard
+              word={input.trim()}
+              lang={detected ?? source}
+              isRTL={isRTL}
+            />
+          )}
+        </AnimatePresence>
 
         {/* ═══════════ RELIGIOUS THEOLOGICAL NUANCES ═══════════ */}
         {isReligious && (

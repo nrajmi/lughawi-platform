@@ -333,3 +333,126 @@ Rules:
       ];
     }
   });
+
+// ─────────────────────────────────────────────────────────────────────────────
+// MORPHOLOGICAL ANALYZER — AI-Powered POS Tagging via Gemini
+// ─────────────────────────────────────────────────────────────────────────────
+
+const MorphologySchema = z.object({
+  text: z.string().min(1).max(3000),
+  lang: z.string().default("en"),
+});
+
+export type MorphToken = {
+  text: string;
+  pos: "noun" | "verb" | "adjective" | "adverb" | "preposition" | "conjunction" | "pronoun" | "article" | "particle" | "proper_noun" | "numeral" | "other";
+  lemma?: string;
+  gloss?: string;
+};
+
+export type MorphResult = {
+  tokens: MorphToken[];
+  stats: Record<string, number>;
+  keyTerms: string[];
+};
+
+export const analyzeMorphology = createServerFn({ method: "POST" })
+  .validator((data: unknown) => {
+    try {
+      return MorphologySchema.parse(data);
+    } catch {
+      throw new Error("Invalid request data format");
+    }
+  })
+  .handler(async ({ data }): Promise<MorphResult> => {
+    const sanitizedText = sanitizeInput(data.text);
+
+    const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    if (!geminiApiKey) {
+      // Graceful degradation: return plain tokens with "other" type
+      const words = sanitizedText.split(/\s+/).filter(Boolean);
+      return {
+        tokens: words.map(w => ({ text: w, pos: "other" })),
+        stats: { other: words.length },
+        keyTerms: [],
+      };
+    }
+
+    const { GoogleGenAI } = await import("@google/genai");
+    const ai = new GoogleGenAI({ apiKey: geminiApiKey });
+
+    const langHint = data.lang === "ar"
+      ? "Arabic (use Arabic linguistic terminology internally but return English POS tags)"
+      : data.lang === "es"
+        ? "Spanish"
+        : "English";
+
+    const prompt = `You are an expert computational linguist specializing in ${langHint} morphological analysis.
+
+Analyze the following text and return a JSON array of tokens with their Part-of-Speech (POS) tags.
+
+Text: "${sanitizedText}"
+
+Return ONLY valid JSON (no markdown, no code blocks, no explanation) with this exact structure:
+{
+  "tokens": [
+    {
+      "text": "original word or punctuation",
+      "pos": "one of: noun | verb | adjective | adverb | preposition | conjunction | pronoun | article | particle | proper_noun | numeral | other",
+      "lemma": "base/root form of the word",
+      "gloss": "brief semantic meaning (3-5 words max)"
+    }
+  ],
+  "keyTerms": ["list", "of", "semantically", "significant", "nouns", "and", "verbs", "max 6 terms"]
+}
+
+Rules:
+- Every word AND punctuation mark must appear as a separate token
+- For Arabic: analyze according to Arabic morphological rules (فعل، اسم، حرف، ضمير، إلخ)
+- proper_noun = names of people, places, organizations
+- particle = Arabic حروف (ل، ب، في، من، إلى، على، etc.) and English determiners/particles
+- Be context-aware: "bank" in "river bank" is noun, not finance
+- Punctuation tokens get pos: "other"
+- Return ONLY the JSON, nothing else`;
+
+    try {
+      const response = await ai.models.generateContent({
+        model: "gemini-2.5-flash",
+        contents: prompt,
+        config: {
+          temperature: 0.1, // Low temperature for deterministic tagging
+        },
+      });
+
+      const raw = response.text || "";
+      const cleaned = raw
+        .replace(/```json\n?/g, "")
+        .replace(/```\n?/g, "")
+        .trim();
+
+      const parsed = JSON.parse(cleaned) as { tokens: MorphToken[]; keyTerms: string[] };
+
+      // Calculate stats
+      const stats: Record<string, number> = {};
+      for (const token of parsed.tokens) {
+        if (token.pos && token.pos !== "other") {
+          stats[token.pos] = (stats[token.pos] || 0) + 1;
+        }
+      }
+
+      return {
+        tokens: parsed.tokens,
+        stats,
+        keyTerms: parsed.keyTerms?.slice(0, 6) || [],
+      };
+    } catch (e) {
+      console.error("Morphology analysis error:", e);
+      // Graceful degradation
+      const words = sanitizedText.split(/\s+/).filter(Boolean);
+      return {
+        tokens: words.map(w => ({ text: w, pos: "other" as const })),
+        stats: {},
+        keyTerms: [],
+      };
+    }
+  });

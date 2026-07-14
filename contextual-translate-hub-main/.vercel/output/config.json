@@ -1,23 +1,14 @@
 {
   "version": 3,
-  "framework": {
-    "name": "nitro",
-    "version": "3.0.260603-beta"
-  },
-  "overrides": {},
   "routes": [
     {
-      "headers": {
-        "cache-control": "public, max-age=31536000, immutable"
-      },
-      "src": "/assets/(.*)"
+      "handle": "error"
     },
     {
-      "handle": "filesystem"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/__server"
+      "status": 404,
+      "src": "^(?!/api).*$",
+      "dest": "/404.html"
     }
-  ]
+  ],
+  "crons": []
 }

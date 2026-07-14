@@ -48,9 +48,10 @@ export const translateText = createServerFn({ method: "POST" })
       let detected = data.source;
       const targetLang = LANG_NAMES[data.target] || data.target;
 
-      // Try Gemini API first if available
+      // Try Gemini API first if available and key looks somewhat valid
       const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (geminiApiKey) {
+      const isValidKeyFormat = typeof geminiApiKey === "string" && geminiApiKey.length > 20;
+      if (geminiApiKey && isValidKeyFormat) {
         const { GoogleGenAI } = await import("@google/genai");
         const ai = new GoogleGenAI({ apiKey: geminiApiKey });
         
@@ -151,16 +152,25 @@ Your linguistic doctrine:
           temp = 0.25;
         }
 
-        const response = await ai.models.generateContent({
-          model: 'gemini-2.5-flash',
-          contents: prompt,
-          config: {
-            systemInstruction,
-            temperature: temp,
-          }
-        });
+        let response;
+        try {
+          response = await ai.models.generateContent({
+            model: 'gemini-1.5-flash',
+            contents: prompt,
+            config: {
+              systemInstruction,
+              temperature: temp,
+            }
+          });
+        } catch (geminiError) {
+          // Gemini API call failed (401 invalid key, 429 quota, 500 server error)
+          // Fall through to Google Translate fallback silently
+          console.error("Gemini API failed, falling back:", geminiError);
+          throw new Error("CLIENT_FALLBACK_REQUIRED");
+        }
         
         translated = response.text || "";
+        if (!translated) throw new Error("CLIENT_FALLBACK_REQUIRED");
         detected = data.source === "auto" ? (sanitizedText.match(/[\u0600-\u06FF]/g)?.length ? "ar" : "en") : data.source;
       } else {
         const encodedText = encodeURIComponent(sanitizedText);
@@ -224,7 +234,8 @@ export const rephraseText = createServerFn({ method: "POST" })
     
     try {
       const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
-      if (!geminiApiKey) {
+      const isValidKeyFormat = typeof geminiApiKey === "string" && geminiApiKey.length > 20;
+      if (!geminiApiKey || !isValidKeyFormat) {
         throw new Error("API key not configured");
       }
       
@@ -260,13 +271,19 @@ Rules:
 - If the text is in Arabic, produce Arabic academic rephrasing
 - If the text is in English, produce English academic rephrasing`;
 
-      const response = await ai.models.generateContent({
-        model: 'gemini-2.5-flash',
-        contents: prompt,
-        config: {
-          temperature: 0.7,
-        }
-      });
+      let response;
+      try {
+        response = await ai.models.generateContent({
+          model: 'gemini-1.5-flash',
+          contents: prompt,
+          config: {
+            temperature: 0.7,
+          }
+        });
+      } catch (geminiError) {
+        console.error("Rephrase Gemini API failed, using fallback:", geminiError);
+        throw new Error("API key not configured"); // triggers fallback
+      }
       
       const raw = response.text || "";
       const cleaned = raw.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim();
@@ -368,11 +385,12 @@ export const analyzeMorphology = createServerFn({ method: "POST" })
     const sanitizedText = sanitizeInput(data.text);
 
     const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
-    if (!geminiApiKey) {
+    const isValidKeyFormat = typeof geminiApiKey === "string" && geminiApiKey.length > 20;
+    if (!geminiApiKey || !isValidKeyFormat) {
       // Graceful degradation: return plain tokens with "other" type
       const words = sanitizedText.split(/\s+/).filter(Boolean);
       return {
-        tokens: words.map(w => ({ text: w, pos: "other" })),
+        tokens: words.map(w => ({ text: w, pos: "other" as const })),
         stats: { other: words.length },
         keyTerms: [],
       };
@@ -416,13 +434,24 @@ Rules:
 - Return ONLY the JSON, nothing else`;
 
     try {
-      const response = await ai.models.generateContent({
-        model: "gemini-2.5-flash",
-        contents: prompt,
-        config: {
-          temperature: 0.1, // Low temperature for deterministic tagging
-        },
-      });
+      let response;
+      try {
+        response = await ai.models.generateContent({
+          model: "gemini-1.5-flash",
+          contents: prompt,
+          config: {
+            temperature: 0.1,
+          },
+        });
+      } catch (geminiError) {
+        console.error("Morphology Gemini API failed, degrading:", geminiError);
+        const words = sanitizedText.split(/\s+/).filter(Boolean);
+        return {
+          tokens: words.map(w => ({ text: w, pos: "other" as const })),
+          stats: {},
+          keyTerms: [],
+        };
+      }
 
       const raw = response.text || "";
       const cleaned = raw

@@ -79,27 +79,39 @@ function PhoneticCard({
   const [isSpeaking, setIsSpeaking] = React.useState(false);
   const prevWordRef = React.useRef("");
 
+  // Only fetch phonetics for English words — other languages just get TTS
+  const isEnglish = lang === "en" || lang === "auto" || !lang;
+
   React.useEffect(() => {
     if (!word || prevWordRef.current === word) return;
     prevWordRef.current = word;
+
+    // For non-English: skip API call, just show the word
+    if (!isEnglish) {
+      setPhonetic({ ipa: `/${word}/`, pronunciation_guide: "" });
+      return;
+    }
+
     setIsLoading(true);
     setPhonetic(null);
 
     (async () => {
       try {
-        const result = await analyzeMorphology({ data: { text: word, lang } });
+        const result = await analyzeMorphology({ data: { text: word, lang: "en" } });
         const firstToken = result.tokens[0];
+        // Use the lemma as the canonical form, and gloss as pronunciation guide
         setPhonetic({
           ipa: firstToken?.lemma ? `/${firstToken.lemma}/` : `/${word}/`,
           pronunciation_guide: firstToken?.gloss || "",
         });
       } catch {
+        // Graceful fallback — just show the word
         setPhonetic({ ipa: `/${word}/`, pronunciation_guide: "" });
       } finally {
         setIsLoading(false);
       }
     })();
-  }, [word, lang]);
+  }, [word, lang, isEnglish]);
 
   const handleSpeak = () => {
     if (!(typeof window !== "undefined" && "speechSynthesis" in window)) return;
@@ -251,7 +263,7 @@ const DOMAINS: { value: DictionaryDomain; label: { ar: string; en: string; es: s
 
 function TranslatorPage() {
   const [source, setSource] = useState<"auto" | "ar" | "en" | "es">("auto");
-  const [target, setTarget] = useState<"ar" | "en" | "es">("en");
+  const [target, setTarget] = useState<"ar" | "en" | "es">("ar");
   const [tone, setTone] = useState<Tone>("general");
   const [domain, setDomain] = useState<DictionaryDomain>("general");
   const [input, setInput] = useState("");
@@ -591,21 +603,35 @@ function TranslatorPage() {
             ))}
           </div>
 
-          {/* Tone selector */}
-          <div className="flex items-center border-s border-border flex-shrink-0">
-            {TONES.map(tn => (
-              <button
-                key={tn.value}
-                onClick={() => setTone(tn.value)}
-                title={tn.value === "general" ? t.generalToneHint : tn.value === "academic" ? t.academicToneHint : tn.value === "technical" ? t.technicalToneHint : t.creativeToneHint}
-                className={cn(
-                  "domain-tab text-[11px]",
-                  tone === tn.value ? "text-primary border-b-2 border-primary font-semibold" : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
-                )}
-              >
-                {tn.value === "general" ? t.generalTone : tn.value === "academic" ? t.academicTone : tn.value === "technical" ? t.technicalTone : t.creativeTone}
-              </button>
-            ))}
+          {/* Tone selector — affects translation style/register */}
+          <div className="flex items-center border-s border-border flex-shrink-0 gap-0.5 px-1">
+            <span className="text-[9px] uppercase font-bold text-muted-foreground/50 tracking-wider px-1 hidden sm:inline">
+              {isRTL ? "نغمة" : "style"}
+            </span>
+            {TONES.map(tn => {
+              const toneColors: Record<string, string> = {
+                general: "text-foreground border-foreground/50",
+                academic: "text-blue-600 dark:text-blue-400 border-blue-500",
+                technical: "text-cyan-600 dark:text-cyan-400 border-cyan-500",
+                creative: "text-purple-600 dark:text-purple-400 border-purple-500",
+              };
+              const isActive = tone === tn.value;
+              return (
+                <button
+                  key={tn.value}
+                  onClick={() => setTone(tn.value)}
+                  title={tn.value === "general" ? t.generalToneHint : tn.value === "academic" ? t.academicToneHint : tn.value === "technical" ? t.technicalToneHint : t.creativeToneHint}
+                  className={cn(
+                    "domain-tab text-[11px] transition-all duration-150 rounded-md px-2",
+                    isActive
+                      ? cn("font-bold border-b-2", toneColors[tn.value])
+                      : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
+                  )}
+                >
+                  {tn.value === "general" ? t.generalTone : tn.value === "academic" ? t.academicTone : tn.value === "technical" ? t.technicalTone : t.creativeTone}
+                </button>
+              );
+            })}
           </div>
         </div>
 
@@ -1498,7 +1524,7 @@ function TranslatorPage() {
 
         {/* ── History ── */}
         <div className="classic-panel rounded-lg overflow-hidden">
-          <button onClick={() => setShowHistory(v => !v)} className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-foreground hover:bg-secondary/40 transition-colors">
+          <div role="button" tabIndex={0} onClick={() => setShowHistory(v => !v)} onKeyDown={e => e.key === 'Enter' && setShowHistory(v => !v)} className="w-full flex items-center justify-between px-4 py-3 text-sm font-medium text-foreground hover:bg-secondary/40 transition-colors cursor-pointer select-none">
             <span className="flex items-center gap-2">
               <History className="h-4 w-4 text-primary" />
               {t.historyTitle}
@@ -1513,7 +1539,7 @@ function TranslatorPage() {
               )}
               {showHistory ? <ChevronUp className="h-4 w-4 text-muted-foreground" /> : <ChevronDown className="h-4 w-4 text-muted-foreground" />}
             </div>
-          </button>
+          </div>
           <AnimatePresence>
             {showHistory && (
               <motion.div initial={{ height: 0, opacity: 0 }} animate={{ height: "auto", opacity: 1 }} exit={{ height: 0, opacity: 0 }} transition={{ duration: 0.2 }} className="overflow-hidden border-t border-border">

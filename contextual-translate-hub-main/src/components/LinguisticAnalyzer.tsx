@@ -157,10 +157,14 @@ export function LinguisticAnalyzer({ text, lang, standalone = false }: Linguisti
   const [result, setResult] = useState<MorphResult | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [isEnglishOnly, setIsEnglishOnly] = useState(false);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const lastTextRef = useRef<string>("");
 
   const isRTL = lang === "ar";
+
+  // Enforce English-only — check before any API call
+  const isEnglish = lang === "en";
 
   const runAnalysis = useCallback(async (textToAnalyze: string, langCode: string) => {
     if (!textToAnalyze.trim()) {
@@ -168,6 +172,15 @@ export function LinguisticAnalyzer({ text, lang, standalone = false }: Linguisti
       return;
     }
 
+    // Enforce English-only restriction
+    if (langCode !== "en") {
+      setIsEnglishOnly(true);
+      setResult(null);
+      setError(null);
+      return;
+    }
+
+    setIsEnglishOnly(false);
     setIsLoading(true);
     setError(null);
 
@@ -176,7 +189,13 @@ export function LinguisticAnalyzer({ text, lang, standalone = false }: Linguisti
       setResult(res);
     } catch (e) {
       console.error("Morphological analysis failed:", e);
-      setError(e instanceof Error ? e.message : "Analysis failed");
+      const msg = e instanceof Error ? e.message : "Analysis failed";
+      if (msg.includes("ENGLISH_ONLY")) {
+        setIsEnglishOnly(true);
+        setError(null);
+      } else {
+        setError(msg);
+      }
     } finally {
       setIsLoading(false);
     }
@@ -186,6 +205,7 @@ export function LinguisticAnalyzer({ text, lang, standalone = false }: Linguisti
     if (!text?.trim()) {
       setResult(null);
       setError(null);
+      setIsEnglishOnly(false);
       return;
     }
 
@@ -214,8 +234,30 @@ export function LinguisticAnalyzer({ text, lang, standalone = false }: Linguisti
           <div className="absolute inset-0 h-8 w-8 rounded-full border-2 border-primary/20 animate-ping" />
         </div>
         <p className="text-xs text-muted-foreground font-medium animate-pulse">
-          {isRTL ? "جارٍ تحليل البنية الصرفية…" : "Analyzing morphological structure…"}
+          {"Analyzing English morphological structure…"}
         </p>
+      </div>
+    );
+  }
+
+  // ── English-Only Restriction State ──
+  if (isEnglishOnly) {
+    return (
+      <div className="flex flex-col items-center gap-3 py-6 px-4 text-center">
+        <div className="w-10 h-10 rounded-full bg-amber-500/10 border border-amber-500/30 flex items-center justify-center">
+          <BookOpen className="h-5 w-5 text-amber-600 dark:text-amber-400" />
+        </div>
+        <div>
+          <p className="text-sm font-semibold text-amber-700 dark:text-amber-400 mb-1">
+            English Only — للإنجليزية فقط
+          </p>
+          <p className="text-[11px] text-muted-foreground leading-relaxed max-w-xs">
+            Linguistic analysis is restricted to <strong>English text</strong> only. Please switch the target language to English to use this feature.
+          </p>
+          <p className="text-[11px] text-muted-foreground mt-1">
+            التحليل اللغوي مخصص للنصوص الإنجليزية فقط. غيّر لغة الترجمة إلى الإنجليزية للاستفادة من هذه الميزة.
+          </p>
+        </div>
       </div>
     );
   }
@@ -227,7 +269,7 @@ export function LinguisticAnalyzer({ text, lang, standalone = false }: Linguisti
         <AlertCircle className="h-4 w-4 text-destructive shrink-0 mt-0.5" />
         <div>
           <p className="text-xs font-semibold text-destructive">
-            {isRTL ? "فشل التحليل اللغوي" : "Analysis Failed"}
+            {"Analysis Failed"}
           </p>
           <p className="text-[11px] text-muted-foreground mt-0.5">{error}</p>
         </div>
@@ -241,9 +283,7 @@ export function LinguisticAnalyzer({ text, lang, standalone = false }: Linguisti
       <div className="flex flex-col items-center gap-2 py-6 text-muted-foreground/50">
         <BookOpen className="h-7 w-7 opacity-30" />
         <p className="text-xs text-center">
-          {isRTL
-            ? "أدخل نصاً في خانة الترجمة لبدء التحليل الصرفي"
-            : "Enter text above to begin morphological analysis"}
+          {"Enter English text above to begin morphological analysis"}
         </p>
       </div>
     );

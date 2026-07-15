@@ -8,7 +8,11 @@ import path from "path";
 export default defineConfig({
   plugins: [
     tailwindcss(),
-    tanstackStart(),
+    tanstackStart({
+      serverFns: {
+        disableCsrfMiddlewareWarning: true,
+      },
+    }),
     react(),
   ],
   resolve: {

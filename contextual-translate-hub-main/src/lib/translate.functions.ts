@@ -48,8 +48,8 @@ export const translateText = createServerFn({ method: "POST" })
       let detected = data.source;
       const targetLang = LANG_NAMES[data.target] || data.target;
 
-      // Try Gemini API first if available and key looks somewhat valid
-      const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      // Try Gemini API first — use server-side env var (process.env), NOT VITE_ prefix
+      const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
       const isValidKeyFormat = typeof geminiApiKey === "string" && geminiApiKey.length > 20;
       if (geminiApiKey && isValidKeyFormat) {
         const { GoogleGenAI } = await import("@google/genai");
@@ -155,7 +155,7 @@ Your linguistic doctrine:
         let response;
         try {
           response = await ai.models.generateContent({
-            model: 'gemini-1.5-flash',
+            model: 'gemini-2.0-flash',
             contents: prompt,
             config: {
               systemInstruction,
@@ -233,7 +233,7 @@ export const rephraseText = createServerFn({ method: "POST" })
     const sanitizedText = sanitizeInput(data.text);
     
     try {
-      const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
       const isValidKeyFormat = typeof geminiApiKey === "string" && geminiApiKey.length > 20;
       if (!geminiApiKey || !isValidKeyFormat) {
         throw new Error("API key not configured");
@@ -274,7 +274,7 @@ Rules:
       let response;
       try {
         response = await ai.models.generateContent({
-          model: 'gemini-1.5-flash',
+          model: 'gemini-2.0-flash',
           contents: prompt,
           config: {
             temperature: 0.7,
@@ -384,7 +384,13 @@ export const analyzeMorphology = createServerFn({ method: "POST" })
   .handler(async ({ data }): Promise<MorphResult> => {
     const sanitizedText = sanitizeInput(data.text);
 
-    const geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    // Restrict to English only — other languages are not supported
+    if (data.lang && data.lang !== "en") {
+      throw new Error(`ENGLISH_ONLY: Linguistic analysis is restricted to English. Detected lang: ${data.lang}`);
+    }
+
+    // Use server-side env var — VITE_ prefix does NOT work in server functions
+    const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
     const isValidKeyFormat = typeof geminiApiKey === "string" && geminiApiKey.length > 20;
     if (!geminiApiKey || !isValidKeyFormat) {
       // Graceful degradation: return plain tokens with "other" type
@@ -399,15 +405,9 @@ export const analyzeMorphology = createServerFn({ method: "POST" })
     const { GoogleGenAI } = await import("@google/genai");
     const ai = new GoogleGenAI({ apiKey: geminiApiKey });
 
-    const langHint = data.lang === "ar"
-      ? "Arabic (use Arabic linguistic terminology internally but return English POS tags)"
-      : data.lang === "es"
-        ? "Spanish"
-        : "English";
+    const prompt = `You are an expert computational linguist specializing in English morphological and syntactic analysis.
 
-    const prompt = `You are an expert computational linguist specializing in ${langHint} morphological analysis.
-
-Analyze the following text and return a JSON array of tokens with their Part-of-Speech (POS) tags.
+Analyze the following English text and return a JSON object with POS-tagged tokens.
 
 Text: "${sanitizedText}"
 
@@ -415,29 +415,31 @@ Return ONLY valid JSON (no markdown, no code blocks, no explanation) with this e
 {
   "tokens": [
     {
-      "text": "original word or punctuation",
+      "text": "original word or punctuation as it appears",
       "pos": "one of: noun | verb | adjective | adverb | preposition | conjunction | pronoun | article | particle | proper_noun | numeral | other",
-      "lemma": "base/root form of the word",
-      "gloss": "brief semantic meaning (3-5 words max)"
+      "lemma": "base/dictionary form of the word",
+      "gloss": "concise semantic role in this sentence (3-6 words max)"
     }
   ],
-  "keyTerms": ["list", "of", "semantically", "significant", "nouns", "and", "verbs", "max 6 terms"]
+  "keyTerms": ["array", "of", "up", "to", "6", "semantically", "significant", "nouns", "and", "verbs"]
 }
 
 Rules:
-- Every word AND punctuation mark must appear as a separate token
-- For Arabic: analyze according to Arabic morphological rules (فعل، اسم، حرف، ضمير، إلخ)
-- proper_noun = names of people, places, organizations
-- particle = Arabic حروف (ل، ب، في، من، إلى، على، etc.) and English determiners/particles
-- Be context-aware: "bank" in "river bank" is noun, not finance
-- Punctuation tokens get pos: "other"
-- Return ONLY the JSON, nothing else`;
+- Every word AND punctuation mark must appear as a SEPARATE token
+- proper_noun: names of people, places, brands, organizations
+- article: 'a', 'an', 'the'
+- particle: 'to' (infinitive marker), 'not', phrasal verb particles (up, out, in, off, etc.)
+- numeral: digits and written-out numbers
+- other: punctuation marks and symbols only
+- Be context-sensitive: 'bank' in 'river bank' is noun (geography)
+- keyTerms: only the most important nouns and verbs (skip articles, prepositions)
+- Return ONLY the JSON object, nothing else`;
 
     try {
       let response;
       try {
         response = await ai.models.generateContent({
-          model: "gemini-1.5-flash",
+          model: "gemini-2.0-flash",
           contents: prompt,
           config: {
             temperature: 0.1,

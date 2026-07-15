@@ -603,36 +603,7 @@ function TranslatorPage() {
             ))}
           </div>
 
-          {/* Tone selector — affects translation style/register */}
-          <div className="flex items-center border-s border-border flex-shrink-0 gap-0.5 px-1">
-            <span className="text-[9px] uppercase font-bold text-muted-foreground/50 tracking-wider px-1 hidden sm:inline">
-              {isRTL ? "نغمة" : "style"}
-            </span>
-            {TONES.map(tn => {
-              const toneColors: Record<string, string> = {
-                general: "text-foreground border-foreground/50",
-                academic: "text-blue-600 dark:text-blue-400 border-blue-500",
-                technical: "text-cyan-600 dark:text-cyan-400 border-cyan-500",
-                creative: "text-purple-600 dark:text-purple-400 border-purple-500",
-              };
-              const isActive = tone === tn.value;
-              return (
-                <button
-                  key={tn.value}
-                  onClick={() => setTone(tn.value)}
-                  title={tn.value === "general" ? t.generalToneHint : tn.value === "academic" ? t.academicToneHint : tn.value === "technical" ? t.technicalToneHint : t.creativeToneHint}
-                  className={cn(
-                    "domain-tab text-[11px] transition-all duration-150 rounded-md px-2",
-                    isActive
-                      ? cn("font-bold border-b-2", toneColors[tn.value])
-                      : "text-muted-foreground hover:text-foreground border-b-2 border-transparent"
-                  )}
-                >
-                  {tn.value === "general" ? t.generalTone : tn.value === "academic" ? t.academicTone : tn.value === "technical" ? t.technicalTone : t.creativeTone}
-                </button>
-              );
-            })}
-          </div>
+
         </div>
 
         {/* ── Language Bar ── */}

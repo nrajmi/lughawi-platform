@@ -45,11 +45,14 @@ export const translateText = createServerFn({ method: "POST" })
     
     try {
       let translated = "";
-      let detected = data.source;
-      const targetLang = LANG_NAMES[data.target] || data.target;
-
-      // Try Gemini API first — use server-side env var (process.env), NOT VITE_ prefix
-      const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+      // Try Gemini API first — use server-side env var (process.env) for Vercel, fallback to VITE_ for local dev
+      let geminiApiKey: string | undefined = undefined;
+      if (typeof process !== "undefined" && process.env && process.env.GEMINI_API_KEY) {
+        geminiApiKey = process.env.GEMINI_API_KEY;
+      } else {
+        geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      }
+      
       const isValidKeyFormat = typeof geminiApiKey === "string" && geminiApiKey.length > 20;
       if (geminiApiKey && isValidKeyFormat) {
         const { GoogleGenAI } = await import("@google/genai");
@@ -233,7 +236,12 @@ export const rephraseText = createServerFn({ method: "POST" })
     const sanitizedText = sanitizeInput(data.text);
     
     try {
-      const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+      let geminiApiKey: string | undefined = undefined;
+      if (typeof process !== "undefined" && process.env && process.env.GEMINI_API_KEY) {
+        geminiApiKey = process.env.GEMINI_API_KEY;
+      } else {
+        geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+      }
       const isValidKeyFormat = typeof geminiApiKey === "string" && geminiApiKey.length > 20;
       if (!geminiApiKey || !isValidKeyFormat) {
         throw new Error("API key not configured");
@@ -390,7 +398,12 @@ export const analyzeMorphology = createServerFn({ method: "POST" })
     }
 
     // Use server-side env var — VITE_ prefix does NOT work in server functions
-    const geminiApiKey = process.env.GEMINI_API_KEY || process.env.VITE_GEMINI_API_KEY;
+    let geminiApiKey: string | undefined = undefined;
+    if (typeof process !== "undefined" && process.env && process.env.GEMINI_API_KEY) {
+      geminiApiKey = process.env.GEMINI_API_KEY;
+    } else {
+      geminiApiKey = import.meta.env.VITE_GEMINI_API_KEY;
+    }
     const isValidKeyFormat = typeof geminiApiKey === "string" && geminiApiKey.length > 20;
     if (!geminiApiKey || !isValidKeyFormat) {
       // Graceful degradation: return plain tokens with "other" type
